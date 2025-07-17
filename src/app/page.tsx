@@ -13,6 +13,8 @@ import * as XLSX from 'xlsx';
 import { LiveCommentary } from '@/components/live-commentary';
 import { generateCommentary } from '@/ai/flows/generate-commentary';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
+import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
 
 
 const MATCH_DURATION_MINUTES = 20; // Per half
@@ -116,16 +118,14 @@ export default function Home() {
   }, []);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
+    let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const isRaidEvent = !['tackle', 'tackle-lona', 'line-out'].includes(data.pointType);
-    
+
     if (isRaidEvent) {
         const teamKey = data.teamId === 1 ? 'team1' : 'team2';
         setRaidState(prev => ({ ...prev, [teamKey]: 0 }));
     }
 
-    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    let commentaryData: any;
-    
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
     if (scoringTeamIndex === -1) return;
 
@@ -211,7 +211,7 @@ export default function Home() {
 
     const isTackleEvent = data.pointType.includes('tackle');
     const raidingTeamForCommentary = isTackleEvent ? defendingTeam : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : scoringTeam;
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : defendingTeam; // Corrected this line
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
@@ -229,7 +229,8 @@ export default function Home() {
     let defenderForCommentary: string | undefined;
 
     if (eventType === 'line_out') {
-        raiderForCommentary = teams.find(t => t.id === raidingTeamId)?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
+        const originalRaidingTeam = teams.find(t => t.id === raidingTeamId)
+        raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
         // Assuming first player of raiding team is the raider. This might need to be more specific.
@@ -240,7 +241,7 @@ export default function Home() {
     }
 
 
-    commentaryData = {
+    const commentaryData = {
         eventType: eventType,
         raidingTeam: raidingTeamForCommentary.name,
         defendingTeam: defendingTeamForCommentary.name,
@@ -471,7 +472,6 @@ export default function Home() {
                 raidingTeamId={raidingTeamId}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
-                onExportStats={handleExportStats}
                 onTeamNameChange={handleTeamNameChange}
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
@@ -491,6 +491,12 @@ export default function Home() {
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
               <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} />
               <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} />
+          </div>
+          <div className="mt-8 flex justify-center">
+              <Button onClick={handleExportStats} size="lg">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Stats to Excel
+              </Button>
           </div>
         </div>
       </main>
