@@ -62,7 +62,6 @@ const formSchema = z.object({
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => {
-  // Player selection is optional only for 'line-out'
   if (data.pointType !== 'line-out') {
     return data.playerId && data.playerId.length > 0;
   }
@@ -70,6 +69,22 @@ const formSchema = z.object({
 }, {
   message: "Player selection is required for this point type.",
   path: ["playerId"],
+}).refine(data => {
+    if (['raid', 'raid-bonus'].includes(data.pointType)) {
+        return data.points >= 1 && data.points <= 5;
+    }
+    return true;
+}, {
+    message: "Raid points must be between 1 and 5.",
+    path: ["points"],
+}).refine(data => {
+    if (['lona-bonus-points', 'lona-points'].includes(data.pointType)) {
+        return data.points >= 6 && data.points <= 7;
+    }
+    return true;
+}, {
+    message: "Points must be 6 or 7 for this Lona event.",
+    path: ["points"],
 });
 
 
@@ -139,10 +154,16 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const handlePointTypeChange = (value: string) => {
     form.setValue('pointType', value as z.infer<typeof formSchema>['pointType']);
     form.setValue('playerId', ''); // Reset player when type changes
+    form.trigger('playerId'); // Manually trigger validation for playerId
     const isTackle = ['tackle', 'tackle-lona'].includes(value);
-    if(isTackle){
-        form.setValue('points', 1);
+    
+    // Reset points based on the new type
+    let defaultPoints = 1;
+    if (['lona-bonus-points', 'lona-points'].includes(value)) {
+        defaultPoints = 6;
     }
+    form.setValue('points', defaultPoints);
+
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     form.setValue('teamId', newTeamId);
   }
