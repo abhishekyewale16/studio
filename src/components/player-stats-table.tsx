@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PlayerRowProps {
   player: Player;
@@ -45,14 +46,14 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">
+      <TableCell className="bg-destructive text-destructive-foreground font-bold">
         <Input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-destructive-foreground/70"
         />
       </TableCell>
       <TableCell className="text-center">{player.totalPoints}</TableCell>
@@ -83,7 +84,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px]">Player</TableHead>
+                <TableHead className="w-[150px] bg-destructive text-destructive-foreground font-bold">Player</TableHead>
                 <TableHead className="text-center">Total Points</TableHead>
                 <TableHead className="text-center">Raid Points</TableHead>
                 <TableHead className="text-center">Bonus Points</TableHead>
