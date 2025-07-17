@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from 'react';
@@ -33,7 +34,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardPlus, Star, Shield, Swords, Award } from 'lucide-react';
+import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 
 interface ScoringControlsProps {
@@ -43,7 +44,7 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().min(1, { message: 'Please select a team.' }),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'lona']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'lona', 'raid-bonus']),
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => data.pointType === 'lona' || (data.playerId && data.playerId.length > 0), {
@@ -70,11 +71,16 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
   const selectedTeam = teams.find(t => t.id === Number(selectedTeamId));
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    let points = values.points;
+    if (values.pointType === 'bonus') points = 1;
+    if (values.pointType === 'lona') points = 2;
+    if (values.pointType === 'raid-bonus') points = values.points; // The total points from raid, bonus is handled in handleAddScore
+
     const data = {
         teamId: Number(values.teamId),
         playerId: values.playerId ? Number(values.playerId) : undefined,
         pointType: values.pointType,
-        points: values.pointType === 'bonus' ? 1 : (values.pointType === 'lona' ? 2 : values.points),
+        points: points,
     };
     onAddScore(data);
     toast({
@@ -147,9 +153,13 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                             <FormControl><RadioGroupItem value="tackle" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Shield className="w-4 h-4" /> Tackle</FormLabel>
                           </FormItem>
+                           <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="raid-bonus" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><PlusSquare className="w-4 h-4" /> Bonus + Points</FormLabel>
+                          </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="bonus" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus</FormLabel>
+                            <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona" /></FormControl>
@@ -187,16 +197,17 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                   />
                 )}
                 
-                {selectedPointType !== 'bonus' && selectedPointType !== 'lona' && (
+                {(selectedPointType === 'raid' || selectedPointType === 'tackle' || selectedPointType === 'raid-bonus') && (
                   <FormField
                     control={form.control}
                     name="points"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Points</FormLabel>
+                        <FormLabel>{selectedPointType === 'raid-bonus' ? 'Raid Points' : 'Points'}</FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="e.g., 1" {...field} />
                         </FormControl>
+                         {selectedPointType === 'raid-bonus' && <p className="text-xs text-muted-foreground pt-1">The bonus point will be added automatically.</p>}
                         <FormMessage />
                       </FormItem>
                     )}

@@ -74,8 +74,9 @@ export default function Home() {
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
-        if(data.pointType === 'lona') teamScoreIncrement = 2;
-        else if(data.pointType === 'bonus') teamScoreIncrement = 1;
+        if (data.pointType === 'lona') teamScoreIncrement = 2;
+        else if (data.pointType === 'bonus') teamScoreIncrement = 1;
+        else if (data.pointType === 'raid-bonus') teamScoreIncrement = data.points + 1;
         else teamScoreIncrement = data.points;
 
         return currentTeams.map(team => {
@@ -92,6 +93,11 @@ export default function Home() {
                                 case 'raid':
                                     newPlayer.raidPoints += data.points;
                                     playerPointIncrement = data.points;
+                                    break;
+                                case 'raid-bonus':
+                                    newPlayer.raidPoints += data.points;
+                                    newPlayer.bonusPoints += 1;
+                                    playerPointIncrement = data.points + 1;
                                     break;
                                 case 'tackle':
                                     newPlayer.tacklePoints += data.points;
@@ -133,7 +139,7 @@ export default function Home() {
                 onResetTimer={handleResetTimer}
               />
             </div>
-            <div className="row-start-2 lg:row-start-1 lg:col-start-3">
+            <div className="row-start-3 lg:row-start-1 lg:col-start-3">
               <ScoringControls teams={teams} onAddScore={handleAddScore} />
             </div>
           </div>
@@ -145,7 +151,7 @@ export default function Home() {
               <PlayerStatsTable team={teams[1]} />
             </div>
             
-            <div className="space-y-8">
+            <div className="space-y-8 lg:col-start-3">
               <FoulPlayAnalyzer />
             </div>
           </div>
