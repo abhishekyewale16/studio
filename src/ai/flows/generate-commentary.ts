@@ -45,7 +45,6 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update. Use the provided context to make your commentary more descriptive.
 
   Match Context:
-  - Current Score: {{raidingTeam}} {{team1Score}} - {{team2Score}} {{defendingTeam}}
   - Time Remaining: {{timer}}
   - Current Empty Raids for {{raidingTeam}}: {{raidCount}}
   - Last few commentary lines for context:
