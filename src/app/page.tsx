@@ -125,7 +125,7 @@ export default function Home() {
 
     let teamScoreIncrement = 0;
     if (data.pointType === 'line-out') {
-         // Points awarded to opposing team
+        // Points awarded to opposing team
     } else if (data.pointType === 'lona-points') {
         teamScoreIncrement = data.points + 2;
     } else if (data.pointType === 'bonus') {
@@ -140,10 +140,12 @@ export default function Home() {
         teamScoreIncrement = data.points;
     }
 
-    let commentaryData;
-    let tempTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    // Create a deep copy to calculate new state without mutating the original
+    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+
+    let commentaryData: any;
     
-    const newTeams = tempTeams.map(team => {
+    const teamUpdates = newTeams.map(team => {
         if (data.pointType === 'line-out') {
             if (team.id !== data.teamId) {
                 return { ...team, score: team.score + data.points };
@@ -192,8 +194,6 @@ export default function Home() {
                             case 'tackle':
                             case 'tackle-lona':
                                 newPlayer.tacklePoints += data.points;
-                                newPlayer.totalPoints += data.points;
-                                if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
                                 playerPointIncrement = data.points;
                                 break;
                             case 'bonus':
@@ -201,6 +201,8 @@ export default function Home() {
                                 playerPointIncrement = 1;
                                 break;
                         }
+                        // Note: Super Tackle points are a subset of tackle points
+                        if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
                         newPlayer.totalPoints += playerPointIncrement;
                         return newPlayer;
                     }
@@ -210,14 +212,14 @@ export default function Home() {
             return updatedTeam;
         }
         return team;
-    }) as [Team, Team];
+    });
 
-    const [team1, team2] = newTeams;
+    const [team1, team2] = teamUpdates as [Team, Team];
     
     if (data.pointType === 'line-out') {
-        const outTeam = teams.find(t => t.id === data.teamId)!;
-        const awardedTeam = teams.find(t => t.id !== data.teamId)!;
-        const outPlayer = outTeam.players.find(p => p.id === data.playerId);
+        const outTeam = teamUpdates.find(t => t.id === data.teamId)!;
+        const awardedTeam = teamUpdates.find(t => t.id !== data.teamId)!;
+        const outPlayer = teams.find(t => t.id === data.teamId)!.players.find(p => p.id === data.playerId); // Get original player name
         commentaryData = {
             eventType: 'line_out',
             raidingTeam: outTeam.name,
@@ -233,8 +235,8 @@ export default function Home() {
             team2Score: team2.score,
         };
     } else {
-        const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
-        const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
+        const scoringTeam = teamUpdates.find(t => t.id === data.teamId)!;
+        const defendingTeam = teamUpdates.find(t => t.id !== data.teamId)!;
         const player = scoringTeam.players.find(p => p.id === data.playerId);
         const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
         const defendingTeamForCommentary = data.pointType.includes('tackle') ? scoringTeam : defendingTeam;
@@ -261,7 +263,7 @@ export default function Home() {
     }
     
     addCommentary(commentaryData);
-    setTeams(newTeams);
+    setTeams(teamUpdates as [Team, Team]);
     
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
@@ -274,41 +276,37 @@ export default function Home() {
     
     let raidingTeamPlayerId: number | undefined;
 
-    setTeams(currentTeams => {
-        const raidingTeam = currentTeams.find(t => t.id === teamId);
-        const raiderId = raidingTeam?.players[0].id; // Assuming first player is raider for empty raid
-        raidingTeamPlayerId = raiderId;
-
-        return currentTeams.map(team => {
-            if(team.id === teamId) {
-                return {
-                    ...team,
-                    players: team.players.map(p => {
-                        if (p.id === raiderId) {
-                            return {...p, totalRaids: p.totalRaids + 1}
-                        }
-                        return p;
-                    })
-                }
+    const newTeamsWithRaidStat = teams.map(team => {
+        if(team.id === teamId) {
+            const raiderId = team.players[0].id; // Assuming first player is raider for empty raid
+            raidingTeamPlayerId = raiderId;
+            return {
+                ...team,
+                players: team.players.map(p => {
+                    if (p.id === raiderId) {
+                        return {...p, totalRaids: p.totalRaids + 1}
+                    }
+                    return p;
+                })
             }
-            return team;
-        }) as [Team, Team]
-    });
+        }
+        return team;
+    }) as [Team, Team]
     
-    const raidingTeam = teams.find(t => t.id === teamId)!;
-    const defendingTeam = teams.find(t => t.id !== teamId)!;
+    const raidingTeam = newTeamsWithRaidStat.find(t => t.id === teamId)!;
+    const defendingTeam = newTeamsWithRaidStat.find(t => t.id !== teamId)!;
     const player = raidingTeam.players.find(p => p.id === raidingTeamPlayerId);
     const isDoOrDieRaid = currentRaids === 2;
 
     if (isDoOrDieRaid) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
-      const raidingTeamName = teams.find(t => t.id === teamId)?.name;
-      const scoringTeamName = teams.find(t => t.id === opposingTeamId)?.name;
+      const raidingTeamName = newTeamsWithRaidStat.find(t => t.id === teamId)?.name;
+      const scoringTeamName = newTeamsWithRaidStat.find(t => t.id === opposingTeamId)?.name;
       
-      const newTeams = teams.map(team => 
+      const newTeamsWithScore = newTeamsWithRaidStat.map(team => 
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
-      const [team1, team2] = newTeams;
+      const [team1, team2] = newTeamsWithScore;
       
       addCommentary({
           eventType: 'do_or_die_fail',
@@ -325,7 +323,7 @@ export default function Home() {
           team2Score: team2.score,
       });
 
-      setTeams(newTeams);
+      setTeams(newTeamsWithScore);
 
       toast({
           title: "Do or Die Raid Failed!",
@@ -339,9 +337,9 @@ export default function Home() {
       setRaidState(prev => isTeam1 ? { ...prev, team1: prev.team1 + 1 } : { ...prev, team2: prev.team2 + 1 });
       toast({
           title: "Empty Raid",
-          description: `Raid count for ${teams.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
+          description: `Raid count for ${newTeamsWithRaidStat.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
       });
-      const [team1, team2] = teams;
+      const [team1, team2] = newTeamsWithRaidStat;
        addCommentary({
           eventType: 'empty_raid',
           raidingTeam: raidingTeam.name,
@@ -356,6 +354,7 @@ export default function Home() {
           team1Score: team1.score,
           team2Score: team2.score
       });
+       setTeams(newTeamsWithRaidStat);
     }
 
     switchRaidingTeam();
