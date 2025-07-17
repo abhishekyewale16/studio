@@ -154,7 +154,7 @@ export default function Home() {
         if (data.playerId) {
             const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
             if (playerIndex !== -1) {
-                const player = newTeams[scoringTeam_index].players[playerIndex];
+                const player = newTeams[scoringTeamIndex].players[playerIndex];
                 let playerPointIncrement = 0;
                 const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
 
