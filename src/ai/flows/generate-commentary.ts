@@ -19,7 +19,11 @@ const GenerateCommentaryInputSchema = z.object({
   points: z.number().describe("The number of points scored in the event."),
   isSuperRaid: z.boolean().describe("Whether the raid was a super raid."),
   isDoOrDie: z.boolean().describe("Whether the raid was a do-or-die raid."),
-  commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.')
+  commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.'),
+  team1Score: z.number().describe("The score of team 1."),
+  team2Score: z.number().describe("The score of team 2."),
+  timer: z.string().describe("The current match time remaining, e.g., '15:32'."),
+  raidCount: z.number().describe("The current consecutive empty raid count for the raiding team."),
 });
 export type GenerateCommentaryInput = z.infer<typeof GenerateCommentaryInputSchema>;
 
@@ -36,16 +40,20 @@ const prompt = ai.definePrompt({
   name: 'generateCommentaryPrompt',
   input: {schema: GenerateCommentaryInputSchema},
   output: {schema: GenerateCommentaryOutputSchema},
-  prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update.
+  prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update. Use the provided context to make your commentary more descriptive.
 
-  Here are the last few commentary lines to provide context:
-  {{#if commentaryHistory}}
-  {{#each commentaryHistory}}
-  - {{this}}
-  {{/each}}
-  {{else}}
-  - The match is just getting started!
-  {{/if}}
+  Match Context:
+  - Current Score: {{raidingTeam}} {{team1Score}} - {{team2Score}} {{defendingTeam}}
+  - Time Remaining: {{timer}}
+  - Current Empty Raids for {{raidingTeam}}: {{raidCount}}
+  - Last few commentary lines for context:
+    {{#if commentaryHistory}}
+    {{#each commentaryHistory}}
+    - {{this}}
+    {{/each}}
+    {{else}}
+    - The match is just getting started!
+    {{/if}}
 
   Now, generate the commentary for the following event:
 
@@ -64,7 +72,7 @@ const prompt = ai.definePrompt({
   This was a DO OR DIE raid!
   {{/if}}
 
-  Based on the event, generate a single, exciting commentary line.
+  Based on all this information, generate a single, exciting commentary line.
   `,
 });
 

@@ -44,7 +44,19 @@ export default function Home() {
     setIsCommentaryLoading(true);
     try {
         const history = commentaryLog.slice(-3); // Keep last 3 for context
-        const result = await generateCommentary({...eventData, commentaryHistory: history});
+        const raidingTeam = teams.find(t => t.id === raidingTeamId)!;
+        const [team1, team2] = teams;
+        
+        const fullEventData = {
+          ...eventData,
+          commentaryHistory: history,
+          team1Score: team1.score,
+          team2Score: team2.score,
+          timer: `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`,
+          raidCount: raidingTeamId === 1 ? raidState.team1 : raidState.team2,
+        }
+
+        const result = await generateCommentary(fullEventData);
         if (result.commentary) {
             setCommentaryLog(prev => [result.commentary, ...prev]);
         }
@@ -53,7 +65,7 @@ export default function Home() {
     } finally {
         setIsCommentaryLoading(false);
     }
-  }, [commentaryLog]);
+  }, [commentaryLog, teams, timer, raidState, raidingTeamId]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -275,8 +287,9 @@ export default function Home() {
     const raidingTeam = teams.find(t => t.id === teamId)!;
     const defendingTeam = teams.find(t => t.id !== teamId)!;
     const player = raidingTeam.players.find(p => p.id === raidingTeamPlayerId);
+    const isDoOrDieRaid = currentRaids === 2;
 
-    if (currentRaids === 2) { 
+    if (isDoOrDieRaid) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
       const raidingTeamName = teams.find(t => t.id === teamId)?.name;
       const scoringTeamName = teams.find(t => t.id === opposingTeamId)?.name;
@@ -316,7 +329,7 @@ export default function Home() {
           raiderName: player?.name,
           points: 0,
           isSuperRaid: false,
-          isDoOrDie: currentRaids === 1,
+          isDoOrDie: false,
       });
     }
 
