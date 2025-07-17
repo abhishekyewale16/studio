@@ -333,7 +333,7 @@ export default function Home() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-8">
                <Scoreboard
                 teams={teams}
                 timer={timer}
@@ -347,7 +347,7 @@ export default function Home() {
                 onTeamCityChange={handleTeamCityChange}
               />
             </div>
-            <div className="lg:col-start-3">
+            <div className="lg:col-start-3 space-y-8">
               <ScoringControls 
                 teams={teams} 
                 raidingTeamId={raidingTeamId}
