@@ -68,7 +68,7 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer }: Pla
 
   return (
     <TableRow className={cn(!player.isPlaying && "opacity-60")}>
-      <TableCell className={cn("font-medium", player.isPlaying && "bg-destructive text-destructive-foreground")}>
+      <TableCell className={cn("font-medium", player.isPlaying && "bg-destructive/10")}>
         <Input
           type="text"
           value={name}
@@ -78,7 +78,9 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer }: Pla
           className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-destructive-foreground/70"
         />
       </TableCell>
-      <TableCell className="text-center">{player.isPlaying ? "Active" : "Bench"}</TableCell>
+      <TableCell className={cn("text-center", player.isPlaying ? 'font-semibold text-primary' : 'text-muted-foreground')}>
+        {player.isPlaying ? "Active" : "Bench"}
+      </TableCell>
       <TableCell className="text-center">{player.totalPoints}</TableCell>
       <TableCell className="text-center">{player.raidPoints}</TableCell>
       <TableCell className="text-center">{player.bonusPoints}</TableCell>
@@ -144,7 +146,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[150px] bg-destructive text-destructive-foreground font-bold">Player</TableHead>
+                <TableHead className="w-[150px] bg-muted/50 font-bold">Player</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Total Points</TableHead>
                 <TableHead className="text-center">Raid Points</TableHead>
