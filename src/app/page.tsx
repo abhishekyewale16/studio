@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
 import { LiveCommentary } from '@/components/live-commentary';
 import { generateCommentary } from '@/ai/flows/generate-commentary';
+import { Document, Packer, Paragraph, TextRun } from 'docx';
 
 
 const MATCH_DURATION_MINUTES = 20; // Per half
@@ -150,16 +151,17 @@ export default function Home() {
         const scoringTeam = currentTeams.find(t => t.id === data.teamId)!;
         const defendingTeam = currentTeams.find(t => t.id !== data.teamId)!;
         const player = scoringTeam.players.find(p => p.id === data.playerId);
+        const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
 
         commentaryData = {
           eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
-          raidingTeam: data.pointType.includes('tackle') ? defendingTeam.name : scoringTeam.name,
+          raidingTeam: raidingTeamForCommentary.name,
           defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
-          raiderName: data.pointType.includes('tackle') ? 'N/A' : (player?.name ?? 'Unknown Player'),
+          raiderName: player?.name ?? 'Unknown Player',
           defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : 'N/A',
           points: data.points,
-          isSuperRaid: false,
-          isDoOrDie: false,
+          isSuperRaid: false, // Default value
+          isDoOrDie: raidState[raidingTeamForCommentary.id === 1 ? 'team1' : 'team2'] === 2,
         };
 
         if(data.pointType === 'line-out') {
@@ -226,12 +228,9 @@ export default function Home() {
                                     playerPointIncrement = data.points + 1;
                                     break;
                                 case 'tackle':
-                                    newPlayer.tacklePoints += data.points;
-                                    playerPointIncrement = data.points;
-                                    break;
                                 case 'tackle-lona':
                                     newPlayer.tacklePoints += data.points;
-                                    newPlayer.superTacklePoints += data.points;
+                                    if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
                                     playerPointIncrement = data.points;
                                     break;
                                 case 'bonus':
@@ -256,7 +255,7 @@ export default function Home() {
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
     }
-  }, [switchRaidingTeam, addCommentary]);
+  }, [switchRaidingTeam, addCommentary, raidState]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
@@ -418,6 +417,31 @@ export default function Home() {
     XLSX.writeFile(wb, matchFileName);
   };
 
+  const handleExportCommentary = () => {
+    const doc = new Document({
+        sections: [{
+            children: commentaryLog.reverse().map(entry => 
+                new Paragraph({
+                    children: [new TextRun(entry)],
+                    spacing: { after: 200 }
+                })
+            ),
+        }],
+    });
+
+    Packer.toBlob(doc).then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        document.body.appendChild(a);
+        a.style.display = "none";
+        a.href = url;
+        a.download = `${teams[0].name} vs ${teams[1].name} - Commentary.docx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+    });
+};
+
   return (
     <>
       <main className="min-h-screen bg-background text-foreground font-body">
@@ -441,7 +465,7 @@ export default function Home() {
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
               />
-               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} />
+               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
             </div>
             <div className="lg:col-start-3 space-y-8">
               <ScoringControls 
