@@ -44,10 +44,15 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().min(1, { message: 'Please select a team.' }),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'lona', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona']),
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
-}).refine(data => data.pointType === 'lona' || (data.playerId && data.playerId.length > 0), {
+}).refine(data => {
+  if (['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona'].includes(data.pointType)) {
+    return data.playerId && data.playerId.length > 0;
+  }
+  return true;
+}, {
   message: "Player selection is required for this point type.",
   path: ["playerId"],
 });
@@ -73,7 +78,6 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
   function onSubmit(values: z.infer<typeof formSchema>) {
     let points = values.points;
     if (values.pointType === 'bonus') points = 1;
-    if (values.pointType === 'lona') points = 2;
     if (values.pointType === 'raid-bonus') points = values.points; // The total points from raid, bonus is handled in handleAddScore
     if (values.pointType === 'lona-bonus-points') points = values.points; // The total points from raid, bonus and lona are handled in handleAddScore
     if (values.pointType === 'tackle-lona') points = values.points; // The total points from tackle and lona are handled in handleAddScore
@@ -184,10 +188,6 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                             <FormControl><RadioGroupItem value="tackle-lona" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Tackle + Lona</FormLabel>
                           </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="lona" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona Only</FormLabel>
-                          </FormItem>
                            <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona-bonus-points" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona+Bonus+Pts</FormLabel>
@@ -203,7 +203,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                   )}
                 />
 
-                {selectedPointType !== 'lona' && (
+                
                   <FormField
                     control={form.control}
                     name="playerId"
@@ -226,7 +226,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                       </FormItem>
                     )}
                   />
-                )}
+                
                 
                 {(selectedPointType === 'raid' || selectedPointType === 'tackle' || selectedPointType === 'raid-bonus' || selectedPointType === 'lona-points' || selectedPointType === 'lona-bonus-points' || selectedPointType === 'tackle-lona') && (
                   <FormField
