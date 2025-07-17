@@ -72,16 +72,16 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
         <div className="flex items-center gap-3">
-            {alignment === 'left' && raidCount === 2 && (
-                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
-                    <AlertTriangle className="w-3 h-3"/>
-                    Do or Die
-                </Badge>
-            )}
             {alignment === 'left' && isRaiding && (
                  <Badge variant="default" className="flex items-center gap-1.5">
                     <ShieldCheck className="w-3 h-3"/>
                     Raiding
+                </Badge>
+            )}
+            {alignment === 'left' && raidCount === 2 && (
+                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
+                    <AlertTriangle className="w-3 h-3"/>
+                    Do or Die
                 </Badge>
             )}
             <EditableField 
@@ -89,16 +89,16 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
                 onSave={(newName) => onNameChange(team.id, newName)}
                 className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit"
             />
-            {alignment === 'right' && isRaiding && (
-                <Badge variant="default" className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3"/>
-                    Raiding
-                </Badge>
-            )}
              {alignment === 'right' && raidCount === 2 && (
                  <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
                     <AlertTriangle className="w-3 h-3"/>
                     Do or Die
+                </Badge>
+            )}
+            {alignment === 'right' && isRaiding && (
+                <Badge variant="default" className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3"/>
+                    Raiding
                 </Badge>
             )}
         </div>
