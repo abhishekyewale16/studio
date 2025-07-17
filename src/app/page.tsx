@@ -10,6 +10,7 @@ import { ScoringControls } from '@/components/scoring-controls';
 import { FoulPlayAnalyzer } from '@/components/foul-play-analyzer';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from 'xlsx';
 
 const MATCH_DURATION_MINUTES = 20; // Per half
 
@@ -292,6 +293,45 @@ export default function Home() {
     );
   };
 
+  const handleExportStats = () => {
+    const wb = XLSX.utils.book_new();
+
+    teams.forEach(team => {
+        const teamDataForSheet = team.players.map(p => ({
+            "Player Name": p.name,
+            "Total Points": p.totalPoints,
+            "Raid Points": p.raidPoints,
+            "Bonus Points": p.bonusPoints,
+            "Tackle Points": p.tacklePoints,
+            "Super Tackle Points": p.superTacklePoints,
+            "Total Raids": p.totalRaids,
+            "Successful Raids": p.successfulRaids,
+            "Success Rate (%)": p.totalRaids > 0 ? ((p.successfulRaids / p.totalRaids) * 100).toFixed(2) : 0,
+            "Super Raids": p.superRaids
+        }));
+
+        const teamHeader = [
+            ["Team:", team.name],
+            ["Coach:", team.coach],
+            ["City:", team.city],
+            ["Final Score:", team.score],
+            [] // Empty row for spacing
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(teamDataForSheet, { origin: "A6" });
+        XLSX.utils.sheet_add_aoa(ws, teamHeader, { origin: "A1" });
+        
+        // Auto-fit columns
+        const colWidths = Object.keys(teamDataForSheet[0] || {}).map(key => ({ wch: Math.max(key.length, ...teamDataForSheet.map(row => String(row[key as keyof typeof row]).length)) + 2 }));
+        ws['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(wb, ws, team.name.substring(0, 31)); // Sheet names have a 31-char limit
+    });
+    
+    const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
+    XLSX.writeFile(wb, matchFileName);
+  };
+
   return (
     <>
       <main className="min-h-screen bg-background text-foreground font-body">
@@ -310,6 +350,7 @@ export default function Home() {
                 raidingTeamId={raidingTeamId}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
+                onExportStats={handleExportStats}
                 onTeamNameChange={handleTeamNameChange}
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}

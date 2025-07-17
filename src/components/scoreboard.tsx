@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -129,13 +129,15 @@ interface ScoreboardProps {
   raidingTeamId: number;
   onToggleTimer: () => void;
   onResetTimer: () => void;
+  onExportStats: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
   onTeamCoachChange: (teamId: number, newCoach: string) => void;
   onTeamCityChange: (teamId: number, newCity: string) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTimer, onResetTimer, onExportStats, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
+  const isMatchOver = timer.minutes === 0 && timer.seconds === 0 && timer.half === 2;
 
   return (
     <Card className="overflow-hidden">
@@ -162,7 +164,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTim
               </div>
               <Separator orientation="vertical" className="h-6" />
               <div className="text-lg font-medium text-muted-foreground">
-                Half {timer.half}
+                {isMatchOver ? "Match Over" : `Half ${timer.half}`}
               </div>
             </div>
           </div>
@@ -170,10 +172,17 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTim
           <TeamDisplay team={teams[1]} raidCount={raidState.team2} isRaiding={raidingTeamId === teams[1].id} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
         </div>
         <div className="mt-6 flex justify-center gap-2">
-          <Button onClick={onToggleTimer} size="sm" disabled={timer.minutes === 0 && timer.seconds === 0 && timer.half === 2}>
-            {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-            {timer.isRunning ? 'Pause' : 'Start'}
-          </Button>
+            {!isMatchOver ? (
+                 <Button onClick={onToggleTimer} size="sm">
+                    {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                    {timer.isRunning ? 'Pause' : 'Start'}
+                </Button>
+            ) : (
+                <Button onClick={onExportStats} size="sm">
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Stats
+                </Button>
+            )}
           <Button onClick={onResetTimer} variant="outline" size="sm">
             <RefreshCw className="mr-2 h-4 w-4" />
             Reset
