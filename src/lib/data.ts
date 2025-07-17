@@ -8,6 +8,7 @@ export const initialTeams: [Team, Team] = [
     coach: 'Coach',
     city: 'City',
     score: 0,
+    timeoutsRemaining: 2,
     players: Array.from({ length: 12 }, (_, i) => ({
       id: 100 + i + 1,
       name: `Player ${i + 1}`,
@@ -28,6 +29,7 @@ export const initialTeams: [Team, Team] = [
     coach: 'Coach',
     city: 'City',
     score: 0,
+    timeoutsRemaining: 2,
     players: Array.from({ length: 12 }, (_, i) => ({
       id: 200 + i + 1,
       name: `Player ${i + 1}`,

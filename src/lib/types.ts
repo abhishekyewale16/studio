@@ -20,4 +20,5 @@ export interface Team {
   city: string;
   score: number;
   players: Player[];
+  timeoutsRemaining: number;
 }

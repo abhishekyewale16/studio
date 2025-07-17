@@ -32,4 +32,5 @@ declare module 'lucide-react' {
     export const Loader2: Icon;
     export const User: Icon;
     export const Clock: Icon;
+    export const Hourglass: Icon;
 }

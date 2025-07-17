@@ -25,15 +25,16 @@ interface PlayerRowProps {
   team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
   onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
+  isSubstitutionAllowed: boolean;
 }
 
-const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer }: PlayerRowProps) => {
+const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed }: PlayerRowProps) => {
   const [name, setName] = useState(player.name);
   const [substituteOpen, setSubstituteOpen] = useState(false);
   const [playerToSubstitute, setPlayerToSubstitute] = useState('');
 
-  const activePlayers = team.players.filter(p => p.isPlaying);
-  const benchedPlayers = team.players.filter(p => !p.isPlaying);
+  const activePlayers = team.players.filter(p => p.isPlaying && p.id !== player.id);
+  const benchedPlayers = team.players.filter(p => !p.isPlaying && p.id !== player.id);
 
   useEffect(() => {
     setName(player.name);
@@ -88,7 +89,7 @@ const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer }: Pla
       <TableCell className="text-center">
          <Dialog open={substituteOpen} onOpenChange={setSubstituteOpen}>
             <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Button variant="ghost" size="icon" className="h-7 w-7" disabled={!isSubstitutionAllowed}>
                     <RefreshCw className="w-4 h-4" />
                 </Button>
             </DialogTrigger>
@@ -129,9 +130,10 @@ interface PlayerStatsTableProps {
   team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
   onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
+  isSubstitutionAllowed: boolean;
 }
 
-export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer }: PlayerStatsTableProps) {
+export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer, isSubstitutionAllowed }: PlayerStatsTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -139,7 +141,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer 
           <User className="text-primary"/>
           {team.name} - Player Statistics
         </CardTitle>
-        <CardDescription>Detailed stats are available in the post-match Excel export.</CardDescription>
+        <CardDescription>{isSubstitutionAllowed ? 'Substitution is allowed.' : 'Detailed stats are available in the post-match Excel export.'}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -163,6 +165,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer 
                   team={team}
                   onPlayerNameChange={onPlayerNameChange} 
                   onSubstitutePlayer={onSubstitutePlayer}
+                  isSubstitutionAllowed={isSubstitutionAllowed}
                 />
               ))}
             </TableBody>

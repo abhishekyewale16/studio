@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock, Hourglass } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,9 +65,12 @@ interface TeamDisplayProps {
   onNameChange: (teamId: number, newName: string) => void;
   onCoachChange: (teamId: number, newCoach: string) => void;
   onCityChange: (teamId: number, newCity: string) => void;
+  onTakeTimeout: (teamId: number) => void;
+  isTimerRunning: boolean;
+  isTimeoutActive: boolean;
 }
 
-const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
+const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange, onTakeTimeout, isTimerRunning, isTimeoutActive }: TeamDisplayProps) => {
 
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
@@ -102,6 +105,17 @@ const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCo
                 </Badge>
             )}
         </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => onTakeTimeout(team.id)}
+                disabled={!isTimerRunning || isTimeoutActive || team.timeoutsRemaining <= 0}
+            >
+                <Hourglass className="mr-2 h-4 w-4" />
+                Timeouts: {team.timeoutsRemaining}
+            </Button>
+        </div>
       <EditableField 
         value={team.coach}
         onSave={(newCoach) => onCoachChange(team.id, newCoach)}
@@ -125,6 +139,7 @@ interface ScoreboardProps {
     seconds: number;
     isRunning: boolean;
     half: 1 | 2;
+    isTimeout: boolean;
   };
   raidState: RaidState;
   raidingTeamId: number;
@@ -135,9 +150,10 @@ interface ScoreboardProps {
   onTeamCoachChange: (teamId: number, newCoach: string) => void;
   onTeamCityChange: (teamId: number, newCity: string) => void;
   onMatchDurationChange: (newDuration: number) => void;
+  onTakeTimeout: (teamId: number) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
   const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
   const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
@@ -160,7 +176,18 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center text-center gap-4">
-          <TeamDisplay team={teams[0]} raidCount={raidState.team1} isRaiding={raidingTeamId === teams[0].id} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay 
+            team={teams[0]} 
+            raidCount={raidState.team1} 
+            isRaiding={raidingTeamId === teams[0].id} 
+            alignment="left" 
+            onNameChange={onTeamNameChange} 
+            onCoachChange={onTeamCoachChange} 
+            onCityChange={onTeamCityChange} 
+            onTakeTimeout={onTakeTimeout}
+            isTimerRunning={timer.isRunning}
+            isTimeoutActive={timer.isTimeout}
+          />
           
           <div className="flex flex-col items-center order-first md:order-none">
             <div className="text-5xl md:text-6xl font-bold tracking-tighter">
@@ -168,6 +195,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
               <span className="text-muted-foreground mx-2">:</span>
               <span className="text-foreground transition-all duration-300">{teams[1].score}</span>
             </div>
+             {timer.isTimeout && <Badge variant="secondary" className="mt-2">TIMEOUT</Badge>}
             <div className="flex items-center gap-4 mt-4">
               <div className="text-xl font-semibold flex items-center gap-2">
                 <Timer className="w-5 h-5" />
@@ -180,7 +208,18 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
             </div>
           </div>
           
-          <TeamDisplay team={teams[1]} raidCount={raidState.team2} isRaiding={raidingTeamId === teams[1].id} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay 
+            team={teams[1]} 
+            raidCount={raidState.team2} 
+            isRaiding={raidingTeamId === teams[1].id} 
+            alignment="right" 
+            onNameChange={onTeamNameChange} 
+            onCoachChange={onTeamCoachChange} 
+            onCityChange={onTeamCityChange} 
+            onTakeTimeout={onTakeTimeout}
+            isTimerRunning={timer.isRunning}
+            isTimeoutActive={timer.isTimeout}
+          />
         </div>
         <div className="mt-6 flex flex-col items-center gap-4">
             <div className="flex items-center gap-2">
@@ -198,7 +237,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
                 />
             </div>
             <div className="flex justify-center gap-2">
-                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver}>
+                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver || timer.isTimeout}>
                     {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                     {buttonText}
                 </Button>
