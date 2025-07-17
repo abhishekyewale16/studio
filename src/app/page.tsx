@@ -155,30 +155,31 @@ export default function Home() {
         const currentRaidingTeamState = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
 
 
-        commentaryData = {
-          eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
-          raidingTeam: raidingTeamForCommentary.name,
-          defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
-          raiderName: player?.name ?? 'Unknown Player',
-          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
-          points: data.points,
-          isSuperRaid: false, // Default value
-          isDoOrDie: currentRaidingTeamState === 2,
-        };
-
         if(data.pointType === 'line-out') {
             const outTeam = currentTeams.find(t => t.id === data.teamId)!;
             const awardedTeam = currentTeams.find(t => t.id !== data.teamId)!;
+            const outPlayer = outTeam.players.find(p => p.id === data.playerId);
             commentaryData = {
                 eventType: 'line_out',
-                raidingTeam: awardedTeam.name,
-                defendingTeam: outTeam.name,
-                raiderName: 'N/A', // or could be player who was out
+                raidingTeam: outTeam.name,
+                defendingTeam: awardedTeam.name,
+                raiderName: outPlayer?.name ?? 'Unknown Player',
                 defenderName: undefined,
                 points: data.points,
                 isSuperRaid: false,
                 isDoOrDie: false,
             }
+        } else {
+            commentaryData = {
+              eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
+              raidingTeam: raidingTeamForCommentary.name,
+              defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
+              raiderName: player?.name ?? 'Unknown Player',
+              defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
+              points: data.points,
+              isSuperRaid: false, // Default value
+              isDoOrDie: currentRaidingTeamState === 2,
+            };
         }
 
 
@@ -468,15 +469,26 @@ export default function Home() {
                 onTeamCityChange={handleTeamCityChange}
               />
                <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
+               <div className="block lg:hidden">
+                 <ScoringControls 
+                    teams={teams} 
+                    raidingTeamId={raidingTeamId}
+                    onAddScore={handleAddScore} 
+                    onEmptyRaid={handleEmptyRaid}
+                    onSwitchRaidingTeam={switchRaidingTeam}
+                  />
+                </div>
             </div>
             <div className="lg:col-start-3 space-y-8">
-              <ScoringControls 
-                teams={teams} 
-                raidingTeamId={raidingTeamId}
-                onAddScore={handleAddScore} 
-                onEmptyRaid={handleEmptyRaid}
-                onSwitchRaidingTeam={switchRaidingTeam}
-              />
+              <div className="hidden lg:block">
+                <ScoringControls 
+                  teams={teams} 
+                  raidingTeamId={raidingTeamId}
+                  onAddScore={handleAddScore} 
+                  onEmptyRaid={handleEmptyRaid}
+                  onSwitchRaidingTeam={switchRaidingTeam}
+                />
+              </div>
               <FoulPlayAnalyzer />
             </div>
           </div>
