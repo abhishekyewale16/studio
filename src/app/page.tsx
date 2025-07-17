@@ -126,8 +126,7 @@ export default function Home() {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
 
-    let commentaryData: any;
-
+    let commentaryData;
     const scoringTeam = teams.find(t => t.id === data.teamId)!;
     const defendingTeam = teams.find(t => t.id !== data.teamId)!;
     
@@ -144,6 +143,7 @@ export default function Home() {
             points: data.points,
             isSuperRaid: false,
             isDoOrDie: false,
+            isBonus: false,
             raidCount: raidingTeamId === 1 ? raidState.team1 : raidState.team2,
         };
     } else {
@@ -153,9 +153,10 @@ export default function Home() {
         const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
         const totalPointsInRaid = data.points + (data.pointType.includes('bonus') ? 1 : 0);
         const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+        const eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
 
         commentaryData = {
-          eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
+          eventType: eventType,
           raidingTeam: raidingTeamForCommentary.name,
           defendingTeam: defendingTeamForCommentary.name,
           raiderName: player?.name ?? 'Unknown Player',
@@ -163,6 +164,7 @@ export default function Home() {
           points: data.points,
           isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
           isDoOrDie: currentRaidCount === 2,
+          isBonus: data.pointType.includes('bonus'),
           raidCount: currentRaidCount
         };
     }
@@ -471,19 +473,7 @@ export default function Home() {
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
               />
-               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
-               <div className="block lg:hidden">
-                 <ScoringControls 
-                    teams={teams} 
-                    raidingTeamId={raidingTeamId}
-                    onAddScore={handleAddScore} 
-                    onEmptyRaid={handleEmptyRaid}
-                    onSwitchRaidingTeam={switchRaidingTeam}
-                  />
-                </div>
-            </div>
-            <div className="lg:col-start-3 space-y-8">
-              <div className="hidden lg:block">
+               <div className="hidden lg:block">
                 <ScoringControls 
                   teams={teams} 
                   raidingTeamId={raidingTeamId}
@@ -492,6 +482,18 @@ export default function Home() {
                   onSwitchRaidingTeam={switchRaidingTeam}
                 />
               </div>
+               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
+            </div>
+            <div className="lg:col-start-3 space-y-8">
+              <div className="block lg:hidden">
+                 <ScoringControls 
+                    teams={teams} 
+                    raidingTeamId={raidingTeamId}
+                    onAddScore={handleAddScore} 
+                    onEmptyRaid={handleEmptyRaid}
+                    onSwitchRaidingTeam={switchRaidingTeam}
+                  />
+                </div>
               <FoulPlayAnalyzer />
             </div>
           </div>

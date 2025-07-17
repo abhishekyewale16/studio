@@ -19,6 +19,7 @@ const GenerateCommentaryInputSchema = z.object({
   points: z.number().describe("The number of points scored in the event."),
   isSuperRaid: z.boolean().describe("Whether the raid was a super raid."),
   isDoOrDie: z.boolean().describe("Whether the raid was a do-or-die raid."),
+  isBonus: z.boolean().optional().describe("Whether a bonus point was scored."),
   commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.'),
   team1Score: z.number().describe("The score of team 1."),
   team2Score: z.number().describe("The score of team 2."),
@@ -65,6 +66,9 @@ const prompt = ai.definePrompt({
   Defender: {{defenderName}}
   {{/if}}
   Points Scored: {{points}}
+  {{#if isBonus}}
+  A bonus point was scored!
+  {{/if}}
   {{#if isSuperRaid}}
   This was a SUPER RAID!
   {{/if}}
