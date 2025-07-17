@@ -206,32 +206,32 @@ export default function Home() {
   }, [raidState, teams, toast, switchRaidingTeam]);
 
 
-  const handleTeamNameChange = useCallback((teamId: number, newName: string) => {
+  const handleTeamNameChange = (teamId: number, newName: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, name: newName } : team
       ) as [Team, Team]
     );
-  }, []);
+  };
   
-  const handleTeamCoachChange = useCallback((teamId: number, newCoach: string) => {
+  const handleTeamCoachChange = (teamId: number, newCoach: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, coach: newCoach } : team
       ) as [Team, Team]
     );
-  }, []);
+  };
 
-  const handleTeamCityChange = useCallback((teamId: number, newCity: string) => {
+  const handleTeamCityChange = (teamId: number, newCity: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, city: newCity } : team
       ) as [Team, Team]
     );
-  }, []);
+  };
 
 
-  const handlePlayerNameChange = useCallback((teamId: number, playerId: number, newName: string) => {
+  const handlePlayerNameChange = (teamId: number, playerId: number, newName: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team => {
         if (team.id === teamId) {
@@ -245,15 +245,15 @@ export default function Home() {
         return team;
       }) as [Team, Team]
     );
-  }, []);
+  };
 
   return (
     <>
       <main className="min-h-screen bg-background text-foreground font-body">
         <div className="container mx-auto p-4 md:p-8">
-          <header className="flex flex-col md:flex-row md:items-baseline md:justify-center gap-2 mb-8 text-center">
-            <h1 className="text-3xl font-headline font-bold text-primary">Kabaddi Score Master</h1>
-            <p className="text-sm text-muted-foreground">The ultimate tool for managing Kabaddi matches.</p>
+          <header className="flex items-baseline justify-center gap-2 mb-8 text-center">
+            <h1 className="text-2xl font-headline font-bold text-primary">Kabaddi Score Master</h1>
+            <p className="text-xs text-muted-foreground">The ultimate tool for managing Kabaddi matches.</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
