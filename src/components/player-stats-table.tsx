@@ -1,3 +1,7 @@
+
+"use client";
+
+import { useState, useEffect } from 'react';
 import type { Team, Player } from '@/lib/types';
 import {
   Table,
@@ -10,6 +14,54 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { User } from 'lucide-react';
+
+interface PlayerRowProps {
+  player: Player;
+  teamId: number;
+  onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
+}
+
+const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
+  const [name, setName] = useState(player.name);
+
+  useEffect(() => {
+    setName(player.name);
+  }, [player.name]);
+
+  const handleBlur = () => {
+    if (name.trim() && name !== player.name) {
+      onPlayerNameChange(teamId, player.id, name);
+    } else {
+        setName(player.name);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleBlur();
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">
+        <Input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
+      </TableCell>
+      <TableCell className="text-center">{player.raidPoints}</TableCell>
+      <TableCell className="text-center">{player.tacklePoints}</TableCell>
+      <TableCell className="text-center">{player.bonusPoints}</TableCell>
+      <TableCell className="text-right font-bold">{player.totalPoints}</TableCell>
+    </TableRow>
+  );
+};
 
 interface PlayerStatsTableProps {
   team: Team;
@@ -39,20 +91,12 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
             </TableHeader>
             <TableBody>
               {team.players.map((player) => (
-                <TableRow key={player.id}>
-                  <TableCell className="font-medium">
-                     <Input
-                        type="text"
-                        value={player.name}
-                        onChange={(e) => onPlayerNameChange(team.id, player.id, e.target.value)}
-                        className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
-                      />
-                  </TableCell>
-                  <TableCell className="text-center">{player.raidPoints}</TableCell>
-                  <TableCell className="text-center">{player.tacklePoints}</TableCell>
-                  <TableCell className="text-center">{player.bonusPoints}</TableCell>
-                  <TableCell className="text-right font-bold">{player.totalPoints}</TableCell>
-                </TableRow>
+                <PlayerRow 
+                  key={player.id} 
+                  player={player} 
+                  teamId={team.id} 
+                  onPlayerNameChange={onPlayerNameChange} 
+                />
               ))}
             </TableBody>
           </Table>
