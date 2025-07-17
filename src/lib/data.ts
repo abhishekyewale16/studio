@@ -3,9 +3,9 @@ import type { Team } from './types';
 export const initialTeams: [Team, Team] = [
   {
     id: 1,
-    name: 'Bengaluru Bulls',
-    coach: 'Randhir Singh',
-    city: 'Bengaluru',
+    name: 'Team 1',
+    coach: 'Coach',
+    city: 'City',
     score: 0,
     players: Array.from({ length: 12 }, (_, i) => ({
       id: 100 + i + 1,
@@ -22,13 +22,13 @@ export const initialTeams: [Team, Team] = [
   },
   {
     id: 2,
-    name: 'Patna Pirates',
-    coach: 'Ram Mehar Singh',
-    city: 'Patna',
+    name: 'Team 2',
+    coach: 'Coach',
+    city: 'City',
     score: 0,
     players: Array.from({ length: 12 }, (_, i) => ({
       id: 200 + i + 1,
-      name: `Raider ${i + 1}`,
+      name: `Player ${i + 1}`,
       raidPoints: 0,
       tacklePoints: 0,
       bonusPoints: 0,
