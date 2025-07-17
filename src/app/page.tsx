@@ -78,6 +78,7 @@ export default function Home() {
         else if (data.pointType === 'lona-points') teamScoreIncrement = data.points + 2;
         else if (data.pointType === 'bonus') teamScoreIncrement = 1;
         else if (data.pointType === 'raid-bonus') teamScoreIncrement = data.points + 1;
+        else if (data.pointType === 'lona-bonus-points') teamScoreIncrement = data.points + 1 + 2;
         else teamScoreIncrement = data.points;
 
         return currentTeams.map(team => {
@@ -97,6 +98,11 @@ export default function Home() {
                                     playerPointIncrement = data.points;
                                     break;
                                 case 'raid-bonus':
+                                    newPlayer.raidPoints += data.points;
+                                    newPlayer.bonusPoints += 1;
+                                    playerPointIncrement = data.points + 1;
+                                    break;
+                                case 'lona-bonus-points':
                                     newPlayer.raidPoints += data.points;
                                     newPlayer.bonusPoints += 1;
                                     playerPointIncrement = data.points + 1;
