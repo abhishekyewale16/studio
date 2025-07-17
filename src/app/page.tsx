@@ -11,6 +11,9 @@ import { FoulPlayAnalyzer } from '@/components/foul-play-analyzer';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from 'xlsx';
+import { LiveCommentary } from '@/components/live-commentary';
+import { generateCommentary } from '@/ai/flows/generate-commentary';
+
 
 const MATCH_DURATION_MINUTES = 20; // Per half
 
@@ -24,6 +27,8 @@ export default function Home() {
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
   const [raidState, setRaidState] = useState<RaidState>({ team1: 0, team2: 0 });
   const [raidingTeamId, setRaidingTeamId] = useState<number>(1);
+  const [commentaryLog, setCommentaryLog] = useState<string[]>([]);
+  const [isCommentaryLoading, setIsCommentaryLoading] = useState(false);
   const [timer, setTimer] = useState({
     minutes: MATCH_DURATION_MINUTES,
     seconds: 0,
@@ -34,6 +39,21 @@ export default function Home() {
   const switchRaidingTeam = useCallback(() => {
     setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
   }, []);
+
+  const addCommentary = useCallback(async (eventData: any) => {
+    setIsCommentaryLoading(true);
+    try {
+        const history = commentaryLog.slice(-3); // Keep last 3 for context
+        const result = await generateCommentary({...eventData, commentaryHistory: history});
+        if (result.commentary) {
+            setCommentaryLog(prev => [result.commentary, ...prev]);
+        }
+    } catch (error) {
+        console.error("Error generating commentary:", error);
+    } finally {
+        setIsCommentaryLoading(false);
+    }
+  }, [commentaryLog]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -83,6 +103,7 @@ export default function Home() {
     });
     setRaidState({ team1: 0, team2: 0 });
     setRaidingTeamId(1);
+    setCommentaryLog([]);
     // A deep copy is needed to reset players too
     setTeams(JSON.parse(JSON.stringify(initialTeams)));
   }, []);
@@ -93,6 +114,8 @@ export default function Home() {
     if (isRaidEvent) {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
+
+    let commentaryData: any = {};
 
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
@@ -111,6 +134,34 @@ export default function Home() {
         } else {
             teamScoreIncrement = data.points;
         }
+
+        const scoringTeam = currentTeams.find(t => t.id === data.teamId)!;
+        const defendingTeam = currentTeams.find(t => t.id !== data.teamId)!;
+        const player = scoringTeam.players.find(p => p.id === data.playerId);
+
+        commentaryData = {
+          eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
+          raidingTeam: data.pointType.includes('tackle') ? defendingTeam.name : scoringTeam.name,
+          defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
+          raiderName: data.pointType.includes('tackle') ? 'N/A' : player?.name,
+          defenderName: data.pointType.includes('tackle') ? player?.name : 'N/A',
+          points: data.points,
+          isSuperRaid: false,
+          isDoOrDie: false,
+        };
+
+        if(data.pointType === 'line-out') {
+            const outTeam = currentTeams.find(t => t.id === data.teamId)!;
+            const awardedTeam = currentTeams.find(t => t.id !== data.teamId)!;
+            commentaryData = {
+                eventType: 'line_out',
+                raidingTeam: awardedTeam.name,
+                defendingTeam: outTeam.name,
+                raiderName: 'N/A', // or could be player who was out
+                points: data.points
+            }
+        }
+
 
         return currentTeams.map(team => {
             if (data.pointType === 'line-out') {
@@ -140,6 +191,7 @@ export default function Home() {
                             
                             if (isSuccessfulRaid && totalPointsInRaid >= 3) {
                                 newPlayer.superRaids += 1;
+                                commentaryData.isSuperRaid = true;
                             }
 
                             switch (data.pointType) {
@@ -184,18 +236,23 @@ export default function Home() {
         }) as [Team, Team];
     });
 
+    addCommentary(commentaryData);
+
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
     }
-  }, [switchRaidingTeam]);
+  }, [switchRaidingTeam, addCommentary]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
     const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
     
+    let raidingTeamPlayerId: number | undefined;
+
     setTeams(currentTeams => {
         const raidingTeam = currentTeams.find(t => t.id === teamId);
-        const raiderId = raidingTeam?.players[0].id; 
+        const raiderId = raidingTeam?.players[0].id; // Assuming first player is raider for empty raid
+        raidingTeamPlayerId = raiderId;
 
         return currentTeams.map(team => {
             if(team.id === teamId) {
@@ -212,7 +269,10 @@ export default function Home() {
             return team;
         }) as [Team, Team]
     });
-
+    
+    const raidingTeam = teams.find(t => t.id === teamId)!;
+    const defendingTeam = teams.find(t => t.id !== teamId)!;
+    const player = raidingTeam.players.find(p => p.id === raidingTeamPlayerId);
 
     if (currentRaids === 2) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
@@ -228,6 +288,14 @@ export default function Home() {
           description: `1 point awarded to ${scoringTeamName} as ${raidingTeamName} failed to score.`,
           variant: "destructive"
       });
+      
+      addCommentary({
+          eventType: 'do_or_die_fail',
+          raidingTeam: raidingTeam.name,
+          defendingTeam: defendingTeam.name,
+          raiderName: player?.name,
+          points: 1
+      });
 
       setRaidState(prev => isTeam1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
 
@@ -237,11 +305,18 @@ export default function Home() {
           title: "Empty Raid",
           description: `Raid count for ${teams.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
       });
+       addCommentary({
+          eventType: 'empty_raid',
+          raidingTeam: raidingTeam.name,
+          defendingTeam: defendingTeam.name,
+          raiderName: player?.name,
+          points: 0
+      });
     }
 
     switchRaidingTeam();
 
-  }, [raidState, teams, toast, switchRaidingTeam]);
+  }, [raidState, teams, toast, switchRaidingTeam, addCommentary]);
 
 
   const handleTeamNameChange = (teamId: number, newName: string) => {
@@ -346,6 +421,7 @@ export default function Home() {
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
               />
+               <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} />
             </div>
             <div className="lg:col-start-3 space-y-8">
               <ScoringControls 
@@ -355,19 +431,14 @@ export default function Home() {
                 onEmptyRaid={handleEmptyRaid}
                 onSwitchRaidingTeam={switchRaidingTeam}
               />
+              <FoulPlayAnalyzer />
             </div>
           </div>
 
 
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
+          <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
               <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} />
               <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} />
-            </div>
-            
-            <div className="space-y-8 lg:col-start-3">
-              <FoulPlayAnalyzer />
-            </div>
           </div>
         </div>
       </main>

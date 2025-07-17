@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { User } from 'lucide-react';
 
@@ -76,6 +76,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
           <User className="text-primary"/>
           {team.name} - Player Statistics
         </CardTitle>
+        <CardDescription>Detailed stats are available in the post-match Excel export.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
