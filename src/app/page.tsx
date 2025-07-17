@@ -253,6 +253,8 @@ export default function Home() {
         isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
         isLona: data.pointType.includes('lona'),
         raidCount: currentRaidCount,
+        team1Score: team1ScoreAfterUpdate,
+        team2Score: team2ScoreAfterUpdate,
     };
     
     addCommentary(commentaryData);
@@ -282,6 +284,10 @@ export default function Home() {
     const player = raidingTeam.players.find(p => p.id === raidingTeamPlayerId);
     const isDoOrDieRaid = currentRaids === 2;
     let finalTeams = newTeamsWithRaidStat;
+    
+    let finalTeam1Score = newTeamsWithRaidStat.find(t => t.id === 1)!.score;
+    let finalTeam2Score = newTeamsWithRaidStat.find(t => t.id === 2)!.score;
+
 
     if (isDoOrDieRaid) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
@@ -292,6 +298,9 @@ export default function Home() {
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
       
+      finalTeam1Score = newTeamsWithScore.find(t => t.id === 1)!.score;
+      finalTeam2Score = newTeamsWithScore.find(t => t.id === 2)!.score;
+
       addCommentary({
           eventType: 'do_or_die_fail',
           raidingTeam: raidingTeam.name,
@@ -303,6 +312,8 @@ export default function Home() {
           isBonus: false,
           isLona: false,
           raidCount: currentRaids,
+          team1Score: finalTeam1Score,
+          team2Score: finalTeam2Score,
       });
 
       finalTeams = newTeamsWithScore;
@@ -332,6 +343,8 @@ export default function Home() {
           isBonus: false,
           isLona: false,
           raidCount: currentRaids,
+          team1Score: finalTeam1Score,
+          team2Score: finalTeam2Score,
       });
     }
 
@@ -566,5 +579,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     
