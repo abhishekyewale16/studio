@@ -10,6 +10,7 @@ export interface Player {
   successfulRaids: number;
   superRaids: number;
   superTacklePoints: number;
+  isPlaying: boolean;
 }
 
 export interface Team {

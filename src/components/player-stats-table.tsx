@@ -13,17 +13,27 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User } from 'lucide-react';
+import { User, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from './ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Label } from './ui/label';
 
 interface PlayerRowProps {
   player: Player;
-  teamId: number;
+  team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
+  onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
 }
 
-const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
+const PlayerRow = ({ player, team, onPlayerNameChange, onSubstitutePlayer }: PlayerRowProps) => {
   const [name, setName] = useState(player.name);
+  const [substituteOpen, setSubstituteOpen] = useState(false);
+  const [playerToSubstitute, setPlayerToSubstitute] = useState('');
+
+  const activePlayers = team.players.filter(p => p.isPlaying);
+  const benchedPlayers = team.players.filter(p => !p.isPlaying);
 
   useEffect(() => {
     setName(player.name);
@@ -31,7 +41,7 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
 
   const handleBlur = () => {
     if (name.trim() && name !== player.name) {
-      onPlayerNameChange(teamId, player.id, name);
+      onPlayerNameChange(team.id, player.id, name);
     } else {
         setName(player.name);
     }
@@ -43,10 +53,22 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
       e.currentTarget.blur();
     }
   };
+  
+  const handleSubstitution = () => {
+      if (!playerToSubstitute) return;
+
+      if(player.isPlaying) {
+          onSubstitutePlayer(team.id, parseInt(playerToSubstitute, 10), player.id);
+      } else {
+          onSubstitutePlayer(team.id, player.id, parseInt(playerToSubstitute, 10));
+      }
+      setSubstituteOpen(false);
+      setPlayerToSubstitute('');
+  }
 
   return (
-    <TableRow>
-      <TableCell className="bg-destructive text-destructive-foreground font-bold">
+    <TableRow className={cn(!player.isPlaying && "opacity-60")}>
+      <TableCell className={cn("font-medium", player.isPlaying && "bg-destructive text-destructive-foreground")}>
         <Input
           type="text"
           value={name}
@@ -56,11 +78,47 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
           className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-destructive-foreground/70"
         />
       </TableCell>
+      <TableCell className="text-center">{player.isPlaying ? "Active" : "Bench"}</TableCell>
       <TableCell className="text-center">{player.totalPoints}</TableCell>
       <TableCell className="text-center">{player.raidPoints}</TableCell>
       <TableCell className="text-center">{player.bonusPoints}</TableCell>
       <TableCell className="text-center">{player.tacklePoints}</TableCell>
-      <TableCell className="text-center">{player.superTacklePoints}</TableCell>
+      <TableCell className="text-center">
+         <Dialog open={substituteOpen} onOpenChange={setSubstituteOpen}>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <RefreshCw className="w-4 h-4" />
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Substitute Player</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                    <p>
+                        Swapping <span className="font-bold">{player.name}</span> ({player.isPlaying ? "Active" : "Bench"})
+                    </p>
+                    <div className="space-y-2">
+                        <Label htmlFor="player-sub">With Player</Label>
+                        <Select onValueChange={setPlayerToSubstitute} value={playerToSubstitute}>
+                            <SelectTrigger id="player-sub">
+                                <SelectValue placeholder={`Select ${player.isPlaying ? 'benched' : 'active'} player...`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {(player.isPlaying ? benchedPlayers : activePlayers).map(p => (
+                                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setSubstituteOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSubstitution} disabled={!playerToSubstitute}>Confirm Substitution</Button>
+                </DialogFooter>
+            </DialogContent>
+         </Dialog>
+      </TableCell>
     </TableRow>
   );
 };
@@ -68,9 +126,10 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
 interface PlayerStatsTableProps {
   team: Team;
   onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
+  onSubstitutePlayer: (teamId: number, playerInId: number, playerOutId: number) => void;
 }
 
-export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableProps) {
+export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer }: PlayerStatsTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -86,11 +145,12 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[150px] bg-destructive text-destructive-foreground font-bold">Player</TableHead>
+                <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Total Points</TableHead>
                 <TableHead className="text-center">Raid Points</TableHead>
                 <TableHead className="text-center">Bonus Points</TableHead>
                 <TableHead className="text-center">Tackle Points</TableHead>
-                <TableHead className="text-center">Super Tackles</TableHead>
+                <TableHead className="text-center">Sub</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,8 +158,9 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
                 <PlayerRow 
                   key={player.id} 
                   player={player} 
-                  teamId={team.id} 
+                  team={team}
                   onPlayerNameChange={onPlayerNameChange} 
+                  onSubstitutePlayer={onSubstitutePlayer}
                 />
               ))}
             </TableBody>

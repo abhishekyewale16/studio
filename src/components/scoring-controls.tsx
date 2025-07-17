@@ -218,6 +218,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const showPlayerSelection = true; 
   const playerSelectTeamId = selectedPointType === 'line-out' ? raidingTeamId : Number(form.watch('teamId'))
   const playerSelectTeam = teams.find(t => t.id === playerSelectTeamId);
+  const activePlayers = playerSelectTeam?.players.filter(p => p.isPlaying);
 
   return (
     <Card>
@@ -328,11 +329,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                         <Select onValueChange={field.onChange} value={field.value} disabled={!playerSelectTeam}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a player" />
+                              <SelectValue placeholder="Select an active player" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {playerSelectTeam?.players.map(player => (
+                            {activePlayers?.map(player => (
                               <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                             ))}
                           </SelectContent>
@@ -431,11 +432,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                                     <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeam}>
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder="Select a player" />
+                                                <SelectValue placeholder="Select an active player" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {raidingTeam?.players.map(player => (
+                                            {raidingTeam?.players.filter(p => p.isPlaying).map(player => (
                                                 <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                                             ))}
                                         </SelectContent>

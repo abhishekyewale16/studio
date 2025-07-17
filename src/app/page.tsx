@@ -250,7 +250,7 @@ export default function Home() {
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
         // This is a simplification. In a real app, you'd know who was raiding.
-        raiderForCommentary = originalRaidingTeam?.players[0]?.name ?? 'Unknown Raider';
+        raiderForCommentary = originalRaidingTeam?.players.find(p => p.isPlaying)?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else { // raid event
         raiderForCommentary = player?.name;
@@ -417,6 +417,32 @@ export default function Home() {
     );
   };
 
+   const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
+    setTeams(currentTeams => {
+        const newTeams = JSON.parse(JSON.stringify(currentTeams)) as [Team, Team];
+        const teamIndex = newTeams.findIndex(t => t.id === teamId);
+        if (teamIndex === -1) return currentTeams;
+
+        const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId);
+        const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId);
+
+        if (playerInIndex !== -1 && playerOutIndex !== -1) {
+            newTeams[teamIndex].players[playerInIndex].isPlaying = true;
+            newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+        }
+        
+        const playerInName = newTeams[teamIndex].players[playerInIndex].name;
+        const playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
+
+        toast({
+            title: "Substitution Successful",
+            description: `${playerInName} has been substituted in for ${playerOutName}.`,
+        });
+
+        return newTeams;
+    });
+  }, [toast]);
+
   const handleExportStats = () => {
     const wb = XLSX.utils.book_new();
     const [team1, team2] = teams;
@@ -455,6 +481,7 @@ export default function Home() {
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
+            "Status": p.isPlaying ? 'Active' : 'Substitute',
             "Total Points": p.totalPoints,
             "Raid Points": p.raidPoints,
             "Bonus Points": p.bonusPoints,
@@ -486,7 +513,7 @@ export default function Home() {
         ws['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
 
         // Headers
-        const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:J5');
+        const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:K5');
         for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: 4, c: C });
             if (ws[cellAddress]) {
@@ -495,7 +522,7 @@ export default function Home() {
         }
         
         // Data and Borders
-        const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:J${5 + team.players.length}`);
+        const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:K${5 + team.players.length}`);
         for (let R = dataRange.s.r + 5; R <= dataRange.e.r; ++R) {
             for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
                 const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
@@ -504,14 +531,14 @@ export default function Home() {
                 ws[cellAddress].s = { ...ws[cellAddress].s, border };
                 
                 // Center numeric data
-                if (typeof ws[cellAddress].v === 'number') {
+                if (typeof ws[cellAddress].v === 'number' || (C > 0 && ws[cellAddress].v === 'Active') || (C > 0 && ws[cellAddress].v === 'Substitute')) {
                     ws[cellAddress].s = { ...ws[cellAddress].s, ...centeredStyle };
                 }
             }
         }
         
         // Column Widths
-        const colWidths = Object.keys(teamDataForSheet[0] || {}).map((key, i) => ({ 
+        const colWidths = Object.keys(teamDataForSheet[0] || {}).map((key) => ({ 
             wch: Math.max(
                 key.length, 
                 ...teamDataForSheet.map(row => String(row[key as keyof typeof row]).length)
@@ -589,8 +616,8 @@ export default function Home() {
 
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} />
-              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} />
+              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} />
+              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} />
           </div>
           <div className="mt-8 flex justify-center">
               <Button onClick={handleExportStats} size="lg">

@@ -19,6 +19,7 @@ export const initialTeams: [Team, Team] = [
       successfulRaids: 0,
       superRaids: 0,
       superTacklePoints: 0,
+      isPlaying: i < 7, // First 7 players are active
     })),
   },
   {
@@ -38,6 +39,7 @@ export const initialTeams: [Team, Team] = [
       successfulRaids: 0,
       superRaids: 0,
       superTacklePoints: 0,
+      isPlaying: i < 7, // First 7 players are active
     })),
   },
 ];
