@@ -152,16 +152,18 @@ export default function Home() {
         const defendingTeam = currentTeams.find(t => t.id !== data.teamId)!;
         const player = scoringTeam.players.find(p => p.id === data.playerId);
         const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
+        const currentRaidingTeamState = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
+
 
         commentaryData = {
           eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
           raidingTeam: raidingTeamForCommentary.name,
           defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
           raiderName: player?.name ?? 'Unknown Player',
-          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : 'N/A',
+          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
           points: data.points,
           isSuperRaid: false, // Default value
-          isDoOrDie: raidState[raidingTeamForCommentary.id === 1 ? 'team1' : 'team2'] === 2,
+          isDoOrDie: currentRaidingTeamState === 2,
         };
 
         if(data.pointType === 'line-out') {
@@ -172,7 +174,7 @@ export default function Home() {
                 raidingTeam: awardedTeam.name,
                 defendingTeam: outTeam.name,
                 raiderName: 'N/A', // or could be player who was out
-                defenderName: 'N/A',
+                defenderName: undefined,
                 points: data.points,
                 isSuperRaid: false,
                 isDoOrDie: false,
@@ -255,7 +257,7 @@ export default function Home() {
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
     }
-  }, [switchRaidingTeam, addCommentary, raidState]);
+  }, [switchRaidingTeam, addCommentary, raidState, teams]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
@@ -490,5 +492,3 @@ export default function Home() {
     </>
   );
 }
-
-    
