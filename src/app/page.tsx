@@ -155,8 +155,8 @@ export default function Home() {
           eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
           raidingTeam: data.pointType.includes('tackle') ? defendingTeam.name : scoringTeam.name,
           defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
-          raiderName: data.pointType.includes('tackle') ? 'N/A' : player?.name,
-          defenderName: data.pointType.includes('tackle') ? player?.name : 'N/A',
+          raiderName: data.pointType.includes('tackle') ? 'N/A' : (player?.name ?? 'Unknown Player'),
+          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : 'N/A',
           points: data.points,
           isSuperRaid: false,
           isDoOrDie: false,
@@ -170,6 +170,7 @@ export default function Home() {
                 raidingTeam: awardedTeam.name,
                 defendingTeam: outTeam.name,
                 raiderName: 'N/A', // or could be player who was out
+                defenderName: 'N/A',
                 points: data.points,
                 isSuperRaid: false,
                 isDoOrDie: false,
@@ -465,3 +466,5 @@ export default function Home() {
     </>
   );
 }
+
+    
