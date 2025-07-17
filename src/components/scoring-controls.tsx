@@ -78,12 +78,20 @@ const formSchema = z.object({
     message: "Raid points must be between 1 and 5.",
     path: ["points"],
 }).refine(data => {
-    if (['lona-bonus-points', 'lona-points'].includes(data.pointType)) {
+    if (['lona-bonus-points'].includes(data.pointType)) {
         return data.points >= 6 && data.points <= 7;
     }
     return true;
 }, {
     message: "Points must be 6 or 7 for this Lona event.",
+    path: ["points"],
+}).refine(data => {
+    if (['lona-points'].includes(data.pointType)) {
+        return data.points >= 1 && data.points <= 7;
+    }
+    return true;
+}, {
+    message: "Raid points can be up to 7 for this Lona event.",
     path: ["points"],
 });
 
@@ -159,8 +167,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     
     // Reset points based on the new type
     let defaultPoints = 1;
-    if (['lona-bonus-points', 'lona-points'].includes(value)) {
+    if (['lona-bonus-points'].includes(value)) {
         defaultPoints = 6;
+    }
+    if (['lona-points'].includes(value)) {
+      defaultPoints = 1;
     }
     form.setValue('points', defaultPoints);
 
