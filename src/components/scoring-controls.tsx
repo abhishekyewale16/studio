@@ -88,12 +88,16 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   });
 
   const selectedPointType = form.watch('pointType');
-  const isTackleEvent = ['tackle', 'tackle-lona'].includes(selectedPointType);
-  const effectiveTeamId = isTackleEvent ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
 
+  // Set the correct teamId when the modal opens or raidingTeamId changes
   useEffect(() => {
+    const isTackleEvent = ['tackle', 'tackle-lona'].includes(selectedPointType);
+    const effectiveTeamId = isTackleEvent ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     form.setValue('teamId', effectiveTeamId);
-  }, [raidingTeamId, selectedPointType, form, effectiveTeamId]);
+    if (form.getValues('playerId')) {
+      form.setValue('playerId', ''); // Reset player on raid change
+    }
+  }, [raidingTeamId, open, form, selectedPointType]);
   
   const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
 
@@ -128,6 +132,15 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         playerId: '',
     });
   }
+  
+  const handlePointTypeChange = (value: string) => {
+    form.setValue('pointType', value as z.infer<typeof formSchema>['pointType']);
+    form.setValue('playerId', ''); // Reset player when type changes
+    const isTackle = ['tackle', 'tackle-lona'].includes(value);
+    const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+    form.setValue('teamId', newTeamId);
+  }
+
 
   const getHelperText = () => {
     switch(selectedPointType) {
@@ -150,7 +163,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   
   const helperText = getHelperText();
   const showPlayerSelection = true; 
-  const playerSelectTeamId = selectedPointType === 'line-out' ? raidingTeamId : Number(effectiveTeamId)
+  const playerSelectTeamId = selectedPointType === 'line-out' ? raidingTeamId : Number(form.watch('teamId'))
   const playerSelectTeam = teams.find(t => t.id === playerSelectTeamId);
 
   return (
@@ -208,10 +221,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     <FormItem className="space-y-3">
                       <FormLabel>Point Type</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={(value) => {
-                          field.onChange(value);
-                          form.setValue('playerId', ''); // Reset player when type changes
-                        }} defaultValue={field.value} className="grid grid-cols-2 gap-2">
+                        <RadioGroup 
+                          onValueChange={handlePointTypeChange} 
+                          value={field.value} 
+                          className="grid grid-cols-2 gap-2"
+                        >
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="raid" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Swords className="w-4 h-4" /> Raid</FormLabel>
