@@ -1,3 +1,4 @@
+
 import type { Team } from './types';
 
 export const initialTeams: [Team, Team] = [

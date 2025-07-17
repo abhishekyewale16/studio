@@ -125,86 +125,85 @@ export default function Home() {
 
     const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     let commentaryData: any;
-
-    let team1ScoreAfterUpdate = newTeams[0].score;
-    let team2ScoreAfterUpdate = newTeams[1].score;
-
+    
     const scoringTeamIndex = newTeams.findIndex(t => t.id === data.teamId);
-    if (scoringTeamIndex !== -1) {
-        const opposingTeamIndex = 1 - scoringTeamIndex;
+    if (scoringTeamIndex === -1) return;
 
-        if (data.pointType === 'line-out') {
-            newTeams[opposingTeamIndex].score += data.points;
+    const opposingTeamIndex = 1 - scoringTeamIndex;
+    
+    if (data.pointType === 'line-out') {
+        newTeams[opposingTeamIndex].score += data.points;
+    } else {
+        let teamScoreIncrement = 0;
+        if (data.pointType === 'lona-points') {
+            teamScoreIncrement = data.points + 2;
+        } else if (data.pointType === 'bonus') {
+            teamScoreIncrement = 1;
+        } else if (data.pointType === 'raid-bonus') {
+            teamScoreIncrement = data.points + 1;
+        } else if (data.pointType === 'lona-bonus-points') {
+            teamScoreIncrement = data.points + 1 + 2;
+        } else if (data.pointType === 'tackle-lona') {
+            teamScoreIncrement = data.points + 2;
         } else {
-            let teamScoreIncrement = 0;
-            if (data.pointType === 'lona-points') {
-                teamScoreIncrement = data.points + 2;
-            } else if (data.pointType === 'bonus') {
-                teamScoreIncrement = 1;
-            } else if (data.pointType === 'raid-bonus') {
-                teamScoreIncrement = data.points + 1;
-            } else if (data.pointType === 'lona-bonus-points') {
-                teamScoreIncrement = data.points + 1 + 2;
-            } else if (data.pointType === 'tackle-lona') {
-                teamScoreIncrement = data.points + 2;
-            } else {
-                teamScoreIncrement = data.points;
-            }
-            newTeams[scoringTeamIndex].score += teamScoreIncrement;
+            teamScoreIncrement = data.points;
+        }
+        newTeams[scoringTeamIndex].score += teamScoreIncrement;
 
-            if (data.playerId) {
-                const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
-                if (playerIndex !== -1) {
-                    const player = newTeams[scoringTeamIndex].players[playerIndex];
-                    let playerPointIncrement = 0;
-                    const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+        if (data.playerId) {
+            const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
+            if (playerIndex !== -1) {
+                const player = newTeams[scoringTeamIndex].players[playerIndex];
+                let playerPointIncrement = 0;
+                const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
 
-                    if (isSuccessfulRaid) {
-                        player.totalRaids += 1;
-                        player.successfulRaids += 1;
-                    }
-
-                    const raidPointsScored = data.points;
-                    const totalPointsInRaid = raidPointsScored + (data.pointType.includes('bonus') ? 1 : 0);
-                    if (isSuccessfulRaid && totalPointsInRaid >= 3) {
-                        player.superRaids += 1;
-                    }
-
-                    switch (data.pointType) {
-                        case 'raid':
-                        case 'lona-points':
-                            player.raidPoints += data.points;
-                            playerPointIncrement = data.points;
-                            break;
-                        case 'raid-bonus':
-                            player.raidPoints += data.points;
-                            player.bonusPoints += 1;
-                            playerPointIncrement = data.points + 1;
-                            break;
-                        case 'lona-bonus-points':
-                            player.raidPoints += data.points;
-                            player.bonusPoints += 1;
-                            playerPointIncrement = data.points + 1;
-                            break;
-                        case 'tackle':
-                        case 'tackle-lona':
-                            player.tacklePoints += data.points;
-                            playerPointIncrement = data.points;
-                            break;
-                        case 'bonus':
-                            player.bonusPoints += 1;
-                            playerPointIncrement = 1;
-                            break;
-                    }
-                    if (data.pointType === 'tackle-lona') player.superTacklePoints += data.points;
-                    player.totalPoints += playerPointIncrement;
+                if (isSuccessfulRaid) {
+                    player.totalRaids += 1;
+                    player.successfulRaids += 1;
                 }
+
+                const raidPointsScored = data.points;
+                const totalPointsInRaid = raidPointsScored + (data.pointType.includes('bonus') ? 1 : 0);
+                if (isSuccessfulRaid && totalPointsInRaid >= 3) {
+                    player.superRaids += 1;
+                }
+
+                switch (data.pointType) {
+                    case 'raid':
+                    case 'lona-points':
+                        player.raidPoints += data.points;
+                        playerPointIncrement = data.points;
+                        break;
+                    case 'raid-bonus':
+                        player.raidPoints += data.points;
+                        player.bonusPoints += 1;
+                        playerPointIncrement = data.points + 1;
+                        break;
+                    case 'lona-bonus-points':
+                        player.raidPoints += data.points;
+                        player.bonusPoints += 1;
+                        playerPointIncrement = data.points + 1;
+                        break;
+                    case 'tackle':
+                    case 'tackle-lona':
+                        player.tacklePoints += data.points;
+                        if (data.points === 2) {
+                            player.superTacklePoints += 1; // It's a count, not points.
+                        }
+                        playerPointIncrement = data.points;
+                        break;
+                    case 'bonus':
+                        player.bonusPoints += 1;
+                        playerPointIncrement = 1;
+                        break;
+                }
+                player.totalPoints += playerPointIncrement;
             }
         }
     }
     
-    team1ScoreAfterUpdate = newTeams.find(t => t.id === 1)!.score;
-    team2ScoreAfterUpdate = newTeams.find(t => t.id === 2)!.score;
+    const team1ScoreAfterUpdate = newTeams.find(t => t.id === 1)!.score;
+    const team2ScoreAfterUpdate = newTeams.find(t => t.id === 2)!.score;
 
     if (data.pointType === 'line-out') {
         const outTeam = newTeams.find(t => t.id === data.teamId)!;
@@ -233,7 +232,11 @@ export default function Home() {
         const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
         const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
         const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
-        const eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
+        
+        let eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
+        if (data.pointType.includes('tackle') && data.points === 2) {
+            eventType = 'super_tackle_score';
+        }
 
         commentaryData = {
             eventType: eventType,
@@ -397,7 +400,7 @@ export default function Home() {
             "Raid Points": p.raidPoints,
             "Bonus Points": p.bonusPoints,
             "Tackle Points": p.tacklePoints,
-            "Super Tackle Points": p.superTacklePoints,
+            "Super Tackles": p.superTacklePoints,
             "Total Raids": p.totalRaids,
             "Successful Raids": p.successfulRaids,
             "Success Rate (%)": p.totalRaids > 0 ? ((p.successfulRaids / p.totalRaids) * 100).toFixed(2) : 0,

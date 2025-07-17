@@ -60,6 +60,7 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
       <TableCell className="text-center">{player.raidPoints}</TableCell>
       <TableCell className="text-center">{player.bonusPoints}</TableCell>
       <TableCell className="text-center">{player.tacklePoints}</TableCell>
+      <TableCell className="text-center">{player.superTacklePoints}</TableCell>
     </TableRow>
   );
 };
@@ -89,6 +90,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
                 <TableHead className="text-center">Raid Points</TableHead>
                 <TableHead className="text-center">Bonus Points</TableHead>
                 <TableHead className="text-center">Tackle Points</TableHead>
+                <TableHead className="text-center">Super Tackles</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

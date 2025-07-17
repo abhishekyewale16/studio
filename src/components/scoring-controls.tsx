@@ -88,16 +88,19 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   });
 
   const selectedPointType = form.watch('pointType');
+  const isTackleEvent = selectedPointType === 'tackle' || selectedPointType === 'tackle-lona';
 
   // Set the correct teamId when the modal opens or raidingTeamId changes
   useEffect(() => {
-    const isTackleEvent = ['tackle', 'tackle-lona'].includes(selectedPointType);
-    const effectiveTeamId = isTackleEvent ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
-    form.setValue('teamId', effectiveTeamId);
-    if (form.getValues('playerId')) {
-      form.setValue('playerId', ''); // Reset player on raid change
+    if(open) {
+      const isTackle = ['tackle', 'tackle-lona'].includes(form.getValues('pointType'));
+      const effectiveTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+      form.setValue('teamId', effectiveTeamId);
+      if (form.getValues('playerId')) {
+        form.setValue('playerId', ''); // Reset player on raid change
+      }
     }
-  }, [raidingTeamId, open, form, selectedPointType]);
+  }, [raidingTeamId, open, form]);
   
   const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
 
@@ -137,6 +140,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     form.setValue('pointType', value as z.infer<typeof formSchema>['pointType']);
     form.setValue('playerId', ''); // Reset player when type changes
     const isTackle = ['tackle', 'tackle-lona'].includes(value);
+    if(isTackle){
+        form.setValue('points', 1);
+    }
     const newTeamId = isTackle ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
     form.setValue('teamId', newTeamId);
   }
@@ -293,7 +299,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   />
                 
                 
-                {(selectedPointType !== 'bonus') && (
+                {(selectedPointType !== 'bonus' && !isTackleEvent) && (
                   <FormField
                     control={form.control}
                     name="points"
@@ -309,6 +315,35 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                           <Input type="number" placeholder="e.g., 1" {...field} />
                         </FormControl>
                          
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {isTackleEvent && (
+                  <FormField
+                    control={form.control}
+                    name="points"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Tackle Points</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                                onValueChange={(value) => field.onChange(Number(value))}
+                                value={String(field.value)}
+                                className="flex gap-4"
+                            >
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="1" /></FormControl>
+                                    <FormLabel className="font-normal">1 Point</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="2" /></FormControl>
+                                    <FormLabel className="font-normal">2 Points (Super Tackle)</FormLabel>
+                                </FormItem>
+                            </RadioGroup>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}

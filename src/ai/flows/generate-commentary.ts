@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating live Kabaddi match commentary.
@@ -11,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateCommentaryInputSchema = z.object({
-  eventType: z.enum(['raid_score', 'tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail']).describe("The type of event that occurred."),
+  eventType: z.enum(['raid_score', 'tackle_score', 'super_tackle_score', 'empty_raid', 'line_out', 'do_or_die_fail']).describe("The type of event that occurred."),
   raidingTeam: z.string().describe("The name of the raiding team."),
   defendingTeam: z.string().describe("The name of the defending team."),
   raiderName: z.string().describe("The name of the raider."),
