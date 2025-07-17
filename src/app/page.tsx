@@ -158,7 +158,9 @@ export default function Home() {
                 raidingTeam: awardedTeam.name,
                 defendingTeam: outTeam.name,
                 raiderName: 'N/A', // or could be player who was out
-                points: data.points
+                points: data.points,
+                isSuperRaid: false,
+                isDoOrDie: false,
             }
         }
 
@@ -294,7 +296,9 @@ export default function Home() {
           raidingTeam: raidingTeam.name,
           defendingTeam: defendingTeam.name,
           raiderName: player?.name,
-          points: 1
+          points: 1,
+          isSuperRaid: false,
+          isDoOrDie: true,
       });
 
       setRaidState(prev => isTeam1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
@@ -310,7 +314,9 @@ export default function Home() {
           raidingTeam: raidingTeam.name,
           defendingTeam: defendingTeam.name,
           raiderName: player?.name,
-          points: 0
+          points: 0,
+          isSuperRaid: false,
+          isDoOrDie: currentRaids === 1,
       });
     }
 
