@@ -43,8 +43,6 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
     }
   };
 
-  const successRate = player.totalRaids > 0 ? ((player.successfulRaids / player.totalRaids) * 100).toFixed(2) : 0;
-
   return (
     <TableRow>
       <TableCell className="font-medium">
@@ -61,11 +59,6 @@ const PlayerRow = ({ player, teamId, onPlayerNameChange }: PlayerRowProps) => {
       <TableCell className="text-center">{player.raidPoints}</TableCell>
       <TableCell className="text-center">{player.bonusPoints}</TableCell>
       <TableCell className="text-center">{player.tacklePoints}</TableCell>
-      <TableCell className="text-center">{player.superTacklePoints}</TableCell>
-      <TableCell className="text-center">{player.totalRaids}</TableCell>
-      <TableCell className="text-center">{player.successfulRaids}</TableCell>
-      <TableCell className="text-center">{successRate}%</TableCell>
-      <TableCell className="text-center">{player.superRaids}</TableCell>
     </TableRow>
   );
 };
@@ -94,11 +87,6 @@ export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableP
                 <TableHead className="text-center">Raid Points</TableHead>
                 <TableHead className="text-center">Bonus Points</TableHead>
                 <TableHead className="text-center">Tackle Points</TableHead>
-                <TableHead className="text-center">Super Tackles</TableHead>
-                <TableHead className="text-center">Total Raids</TableHead>
-                <TableHead className="text-center">Success Raids</TableHead>
-                <TableHead className="text-center">Success Rate</TableHead>
-                <TableHead className="text-center">Super Raids</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
