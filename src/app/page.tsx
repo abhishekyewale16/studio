@@ -116,8 +116,8 @@ export default function Home() {
   }, []);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
-    const isRaidEvent = ['raid', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType);
-
+    const isRaidEvent = !['tackle', 'tackle-lona', 'line-out'].includes(data.pointType);
+    
     if (isRaidEvent) {
         const teamKey = data.teamId === 1 ? 'team1' : 'team2';
         setRaidState(prev => ({ ...prev, [teamKey]: 0 }));
@@ -205,63 +205,63 @@ export default function Home() {
     const team1ScoreAfterUpdate = newTeams.find(t => t.id === 1)!.score;
     const team2ScoreAfterUpdate = newTeams.find(t => t.id === 2)!.score;
 
-    if (data.pointType === 'line-out') {
-        const outTeam = newTeams.find(t => t.id === data.teamId)!;
-        const awardedTeam = newTeams.find(t => t.id !== data.teamId)!;
-        const outPlayer = teams.find(t => t.id === data.teamId)!.players.find(p => p.id === data.playerId);
-        commentaryData = {
-            eventType: 'line_out',
-            raidingTeam: outTeam.name,
-            defendingTeam: awardedTeam.name,
-            raiderName: outPlayer?.name ?? 'Unknown Player',
-            points: data.points,
-            isSuperRaid: false,
-            isDoOrDie: false,
-            isBonus: false,
-            isLona: false,
-            raidCount: data.teamId === 1 ? raidState.team1 : raidState.team2,
-            team1Score: team1ScoreAfterUpdate,
-            team2Score: team2ScoreAfterUpdate,
-        };
-    } else {
-        const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
-        const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
-        const player = scoringTeam.players.find(p => p.id === data.playerId);
-        const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
-        const defendingTeamForCommentary = data.pointType.includes('tackle') ? scoringTeam : defendingTeam;
-        const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
-        const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
-        const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
-        
-        let eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
-        if (data.pointType.includes('tackle') && data.points === 2) {
-            eventType = 'super_tackle_score';
-        }
+    const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
+    const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
+    const player = scoringTeam.players.find(p => p.id === data.playerId);
 
-        commentaryData = {
-            eventType: eventType,
-            raidingTeam: raidingTeamForCommentary.name,
-            defendingTeam: defendingTeamForCommentary.name,
-            raiderName: player?.name ?? 'Unknown Player',
-            defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
-            points: data.points,
-            isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
-            isDoOrDie: currentRaidCount === 2,
-            isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
-            isLona: data.pointType.includes('lona'),
-            raidCount: currentRaidCount,
-            team1Score: team1ScoreAfterUpdate,
-            team2Score: team2ScoreAfterUpdate,
-        };
+    const isTackleEvent = data.pointType.includes('tackle');
+    const raidingTeamForCommentary = isTackleEvent ? defendingTeam : scoringTeam;
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : scoringTeam;
+    const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
+    const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
+    const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+
+    let eventType: string;
+    if (isTackleEvent) {
+        eventType = data.points === 2 ? 'super_tackle_score' : 'tackle_score';
+    } else if (data.pointType === 'line-out') {
+        eventType = 'line_out';
+    } else {
+        eventType = 'raid_score';
     }
+    
+    let raiderForCommentary: string | undefined;
+    let defenderForCommentary: string | undefined;
+
+    if (eventType === 'line_out') {
+        raiderForCommentary = teams.find(t => t.id === raidingTeamId)?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
+    } else if (isTackleEvent) {
+        const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
+        // Assuming first player of raiding team is the raider. This might need to be more specific.
+        raiderForCommentary = originalRaidingTeam?.players[0]?.name ?? 'Unknown Raider';
+        defenderForCommentary = player?.name;
+    } else { // raid event
+        raiderForCommentary = player?.name;
+    }
+
+
+    commentaryData = {
+        eventType: eventType,
+        raidingTeam: raidingTeamForCommentary.name,
+        defendingTeam: defendingTeamForCommentary.name,
+        raiderName: raiderForCommentary,
+        defenderName: defenderForCommentary,
+        points: data.points,
+        isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
+        isDoOrDie: currentRaidCount === 2,
+        isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
+        isLona: data.pointType.includes('lona'),
+        raidCount: currentRaidCount,
+        team1Score: team1ScoreAfterUpdate,
+        team2Score: team2ScoreAfterUpdate,
+    };
+    
 
     addCommentary(commentaryData);
     setTeams(newTeams);
+    switchRaidingTeam();
 
-    if (!['tackle', 'tackle-lona'].includes(data.pointType)) {
-        switchRaidingTeam();
-    }
-}, [teams, raidState, addCommentary, switchRaidingTeam]);
+}, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
 
 
   const handleEmptyRaid = useCallback((teamId: number) => {
