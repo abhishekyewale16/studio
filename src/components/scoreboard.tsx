@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck, Download, Clock } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 
 interface EditableFieldProps {
     value: string;
@@ -127,16 +128,27 @@ interface ScoreboardProps {
   };
   raidState: RaidState;
   raidingTeamId: number;
+  matchDuration: number;
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
   onTeamCoachChange: (teamId: number, newCoach: string) => void;
   onTeamCityChange: (teamId: number, newCity: string) => void;
+  onMatchDurationChange: (newDuration: number) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
-  const isMatchOver = timer.minutes === 0 && timer.seconds === 0 && timer.half === 2;
+  const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
+  const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
+  const isMatchOver = isSecondHalfOver;
+
+  let buttonText = timer.isRunning ? 'Pause' : 'Start';
+  if (isFirstHalfOver) {
+    buttonText = 'Start Half 2';
+  } else if (isMatchOver) {
+    buttonText = 'Match Over';
+  }
 
   return (
     <Card className="overflow-hidden">
@@ -170,17 +182,31 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTim
           
           <TeamDisplay team={teams[1]} raidCount={raidState.team2} isRaiding={raidingTeamId === teams[1].id} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
         </div>
-        <div className="mt-6 flex justify-center gap-2">
-            {!isMatchOver && (
-                 <Button onClick={onToggleTimer} size="sm">
+        <div className="mt-6 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2">
+                <Label htmlFor="match-duration" className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4"/>
+                    Half Duration (min):
+                </Label>
+                <Input 
+                    id="match-duration"
+                    type="number" 
+                    value={matchDuration}
+                    onChange={(e) => onMatchDurationChange(parseInt(e.target.value, 10))}
+                    className="w-20"
+                    disabled={timer.isRunning}
+                />
+            </div>
+            <div className="flex justify-center gap-2">
+                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver}>
                     {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                    {timer.isRunning ? 'Pause' : 'Start'}
+                    {buttonText}
                 </Button>
-            )}
-          <Button onClick={onResetTimer} variant="outline" size="sm">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Reset
-          </Button>
+                <Button onClick={onResetTimer} variant="outline" size="sm">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reset
+                </Button>
+            </div>
         </div>
       </CardContent>
     </Card>

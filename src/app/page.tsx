@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 
 
-const MATCH_DURATION_MINUTES = 20; // Per half
+const INITIAL_MATCH_DURATION = 20;
 
 export type RaidState = {
   team1: number;
@@ -31,8 +31,9 @@ export default function Home() {
   const [raidingTeamId, setRaidingTeamId] = useState<number>(1);
   const [commentaryLog, setCommentaryLog] = useState<string[]>([]);
   const [isCommentaryLoading, setIsCommentaryLoading] = useState(false);
+  const [matchDuration, setMatchDuration] = useState(INITIAL_MATCH_DURATION);
   const [timer, setTimer] = useState({
-    minutes: MATCH_DURATION_MINUTES,
+    minutes: INITIAL_MATCH_DURATION,
     seconds: 0,
     isRunning: false,
     half: 1 as 1 | 2,
@@ -75,21 +76,8 @@ export default function Home() {
           if (prev.minutes > 0) {
             return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
           }
-          // Timer ends
-          const isEndOfFirstHalf = prev.half === 1;
-          const matchEnded = prev.half === 2;
-          
-          if (matchEnded) {
-              return { ...prev, isRunning: false };
-          }
-
-          return {
-            ...prev,
-            isRunning: false, // Pause timer between halves
-            minutes: MATCH_DURATION_MINUTES,
-            seconds: 0,
-            half: 2,
-          };
+          // Timer ends, stop running
+          return { ...prev, isRunning: false };
         });
       }, 1000);
     }
@@ -99,13 +87,28 @@ export default function Home() {
   }, [timer.isRunning]);
 
   const handleToggleTimer = useCallback(() => {
-    if(timer.minutes === 0 && timer.seconds === 0 && timer.half === 2) return;
-    setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
-  }, [timer.minutes, timer.seconds, timer.half]);
+    const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
+    const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
+
+    if (isSecondHalfOver) return; // Match is fully over
+
+    if (isFirstHalfOver) {
+      // Start the second half
+      setTimer({
+        minutes: matchDuration,
+        seconds: 0,
+        isRunning: true,
+        half: 2,
+      });
+    } else {
+      // Toggle pause/play
+      setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
+    }
+  }, [timer, matchDuration]);
 
   const handleResetTimer = useCallback(() => {
     setTimer({
-      minutes: MATCH_DURATION_MINUTES,
+      minutes: matchDuration,
       seconds: 0,
       isRunning: false,
       half: 1,
@@ -115,7 +118,16 @@ export default function Home() {
     setCommentaryLog([]);
     // A deep copy is needed to reset players too
     setTeams(JSON.parse(JSON.stringify(initialTeams)));
-  }, []);
+  }, [matchDuration]);
+
+  const handleMatchDurationChange = useCallback((newDuration: number) => {
+    const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
+    setMatchDuration(duration);
+    // Only update timer if it's not currently running
+    if (!timer.isRunning) {
+        setTimer(prev => ({ ...prev, minutes: duration, seconds: 0 }));
+    }
+  }, [timer.isRunning]);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
@@ -545,11 +557,13 @@ export default function Home() {
                 timer={timer}
                 raidState={raidState}
                 raidingTeamId={raidingTeamId}
+                matchDuration={matchDuration}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
                 onTeamNameChange={handleTeamNameChange}
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
+                onMatchDurationChange={handleMatchDurationChange}
               />
                <ScoringControls 
                   teams={teams} 
