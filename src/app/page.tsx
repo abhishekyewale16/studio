@@ -123,148 +123,140 @@ export default function Home() {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
 
-    let updatedTeams: [Team, Team] | null = null;
+    let teamScoreIncrement = 0;
+    if (data.pointType === 'line-out') {
+         // Points awarded to opposing team
+    } else if (data.pointType === 'lona-points') {
+        teamScoreIncrement = data.points + 2;
+    } else if (data.pointType === 'bonus') {
+        teamScoreIncrement = 1;
+    } else if (data.pointType === 'raid-bonus') {
+        teamScoreIncrement = data.points + 1;
+    } else if (data.pointType === 'lona-bonus-points') {
+        teamScoreIncrement = data.points + 1 + 2;
+    } else if (data.pointType === 'tackle-lona') {
+        teamScoreIncrement = data.points + 2;
+    } else {
+        teamScoreIncrement = data.points;
+    }
 
-    setTeams(currentTeams => {
-        let teamScoreIncrement = 0;
+    const newTeams = teams.map(team => {
         if (data.pointType === 'line-out') {
-             // Points awarded to opposing team
-        } else if (data.pointType === 'lona-points') {
-            teamScoreIncrement = data.points + 2;
-        } else if (data.pointType === 'bonus') {
-            teamScoreIncrement = 1;
-        } else if (data.pointType === 'raid-bonus') {
-            teamScoreIncrement = data.points + 1;
-        } else if (data.pointType === 'lona-bonus-points') {
-            teamScoreIncrement = data.points + 1 + 2;
-        } else if (data.pointType === 'tackle-lona') {
-            teamScoreIncrement = data.points + 2;
-        } else {
-            teamScoreIncrement = data.points;
-        }
-
-        const newTeams = currentTeams.map(team => {
-            if (data.pointType === 'line-out') {
-                if (team.id !== data.teamId) {
-                    return { ...team, score: team.score + data.points };
-                }
-                return team;
-            }
-
-            if (team.id === data.teamId) {
-                const updatedTeam = { ...team, score: team.score + teamScoreIncrement };
-
-                if (data.playerId) {
-                    updatedTeam.players = team.players.map(player => {
-                        if (player.id === data.playerId) {
-                            const newPlayer = { ...player };
-                            let playerPointIncrement = 0;
-                            
-                            const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
-                            if(isSuccessfulRaid) {
-                                newPlayer.totalRaids += 1;
-                                newPlayer.successfulRaids += 1;
-                            }
-
-                            const raidPointsScored = data.points;
-                            const totalPointsInRaid = raidPointsScored + (data.pointType.includes('bonus') ? 1 : 0);
-                            
-                            if (isSuccessfulRaid && totalPointsInRaid >= 3) {
-                                newPlayer.superRaids += 1;
-                            }
-
-                            switch (data.pointType) {
-                                case 'raid':
-                                case 'lona-points':
-                                    newPlayer.raidPoints += data.points;
-                                    playerPointIncrement = data.points;
-                                    break;
-                                case 'raid-bonus':
-                                    newPlayer.raidPoints += data.points;
-                                    newPlayer.bonusPoints += 1;
-                                    playerPointIncrement = data.points + 1;
-                                    break;
-                                case 'lona-bonus-points':
-                                    newPlayer.raidPoints += data.points;
-                                    newPlayer.bonusPoints += 1;
-                                    playerPointIncrement = data.points + 1;
-                                    break;
-                                case 'tackle':
-                                case 'tackle-lona':
-                                    newPlayer.tacklePoints += data.points;
-                                    if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
-                                    playerPointIncrement = data.points;
-                                    break;
-                                case 'bonus':
-                                    newPlayer.bonusPoints += 1;
-                                    playerPointIncrement = 1;
-                                    break;
-                            }
-                            newPlayer.totalPoints += playerPointIncrement;
-                            return newPlayer;
-                        }
-                        return player;
-                    });
-                }
-                return updatedTeam;
+            if (team.id !== data.teamId) {
+                return { ...team, score: team.score + data.points };
             }
             return team;
-        }) as [Team, Team];
-
-        updatedTeams = newTeams;
-        return newTeams;
-    });
-    
-    // We use the `updatedTeams` variable which is guaranteed to be set after the state update.
-    if (updatedTeams) {
-        let commentaryData;
-        const [team1, team2] = updatedTeams;
-        const scoringTeam = updatedTeams.find(t => t.id === data.teamId)!;
-        const defendingTeam = updatedTeams.find(t => t.id !== data.teamId)!;
-        
-        if (data.pointType === 'line-out') {
-            const outTeam = teams.find(t => t.id === raidingTeamId)!;
-            const awardedTeam = teams.find(t => t.id !== raidingTeamId)!;
-            const outPlayer = outTeam.players.find(p => p.id === data.playerId);
-            commentaryData = {
-                eventType: 'line_out',
-                raidingTeam: outTeam.name,
-                defendingTeam: awardedTeam.name,
-                raiderName: outPlayer?.name ?? 'Unknown Player',
-                points: data.points,
-                isSuperRaid: false,
-                isDoOrDie: false,
-                isBonus: false,
-                raidCount: raidingTeamId === 1 ? raidState.team1 : raidState.team2,
-                team1Score: team1.score,
-                team2Score: team2.score,
-            };
-        } else {
-            const player = scoringTeam.players.find(p => p.id === data.playerId);
-            const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
-            const defendingTeamForCommentary = data.pointType.includes('tackle') ? scoringTeam : defendingTeam;
-            const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
-            const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
-            const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
-            const eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
-
-            commentaryData = {
-              eventType: eventType,
-              raidingTeam: raidingTeamForCommentary.name,
-              defendingTeam: defendingTeamForCommentary.name,
-              raiderName: player?.name ?? 'Unknown Player',
-              defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
-              points: data.points,
-              isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
-              isDoOrDie: currentRaidCount === 2,
-              isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
-              raidCount: currentRaidCount,
-              team1Score: team1.score,
-              team2Score: team2.score,
-            };
         }
-        addCommentary(commentaryData);
+
+        if (team.id === data.teamId) {
+            const updatedTeam = { ...team, score: team.score + teamScoreIncrement };
+
+            if (data.playerId) {
+                updatedTeam.players = team.players.map(player => {
+                    if (player.id === data.playerId) {
+                        const newPlayer = { ...player };
+                        let playerPointIncrement = 0;
+                        
+                        const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+                        if(isSuccessfulRaid) {
+                            newPlayer.totalRaids += 1;
+                            newPlayer.successfulRaids += 1;
+                        }
+
+                        const raidPointsScored = data.points;
+                        const totalPointsInRaid = raidPointsScored + (data.pointType.includes('bonus') ? 1 : 0);
+                        
+                        if (isSuccessfulRaid && totalPointsInRaid >= 3) {
+                            newPlayer.superRaids += 1;
+                        }
+
+                        switch (data.pointType) {
+                            case 'raid':
+                            case 'lona-points':
+                                newPlayer.raidPoints += data.points;
+                                playerPointIncrement = data.points;
+                                break;
+                            case 'raid-bonus':
+                                newPlayer.raidPoints += data.points;
+                                newPlayer.bonusPoints += 1;
+                                playerPointIncrement = data.points + 1;
+                                break;
+                            case 'lona-bonus-points':
+                                newPlayer.raidPoints += data.points;
+                                newPlayer.bonusPoints += 1;
+                                playerPointIncrement = data.points + 1;
+                                break;
+                            case 'tackle':
+                            case 'tackle-lona':
+                                newPlayer.tacklePoints += data.points;
+                                if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
+                                playerPointIncrement = data.points;
+                                break;
+                            case 'bonus':
+                                newPlayer.bonusPoints += 1;
+                                playerPointIncrement = 1;
+                                break;
+                        }
+                        newPlayer.totalPoints += playerPointIncrement;
+                        return newPlayer;
+                    }
+                    return player;
+                });
+            }
+            return updatedTeam;
+        }
+        return team;
+    }) as [Team, Team];
+
+    let commentaryData;
+    const [team1, team2] = newTeams;
+    
+    if (data.pointType === 'line-out') {
+        const outTeam = teams.find(t => t.id === data.teamId)!;
+        const awardedTeam = teams.find(t => t.id !== data.teamId)!;
+        const outPlayer = outTeam.players.find(p => p.id === data.playerId);
+        commentaryData = {
+            eventType: 'line_out',
+            raidingTeam: outTeam.name,
+            defendingTeam: awardedTeam.name,
+            raiderName: outPlayer?.name ?? 'Unknown Player',
+            points: data.points,
+            isSuperRaid: false,
+            isDoOrDie: false,
+            isBonus: false,
+            raidCount: data.teamId === 1 ? raidState.team1 : raidState.team2,
+            team1Score: team1.score,
+            team2Score: team2.score,
+        };
+    } else {
+        const scoringTeam = newTeams.find(t => t.id === data.teamId)!;
+        const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
+        const player = scoringTeam.players.find(p => p.id === data.playerId);
+        const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
+        const defendingTeamForCommentary = data.pointType.includes('tackle') ? scoringTeam : defendingTeam;
+        const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
+        const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
+        const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+        const eventType = data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score';
+
+        commentaryData = {
+          eventType: eventType,
+          raidingTeam: raidingTeamForCommentary.name,
+          defendingTeam: defendingTeamForCommentary.name,
+          raiderName: player?.name ?? 'Unknown Player',
+          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
+          points: data.points,
+          isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
+          isDoOrDie: currentRaidCount === 2,
+          isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
+          raidCount: currentRaidCount,
+          team1Score: team1.score,
+          team2Score: team2.score,
+        };
     }
+    
+    addCommentary(commentaryData);
+    setTeams(newTeams);
     
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
@@ -489,27 +481,16 @@ export default function Home() {
                 onTeamCoachChange={handleTeamCoachChange}
                 onTeamCityChange={handleTeamCityChange}
               />
-               <div className="hidden lg:block">
-                <ScoringControls 
+               <ScoringControls 
                   teams={teams} 
                   raidingTeamId={raidingTeamId}
                   onAddScore={handleAddScore} 
                   onEmptyRaid={handleEmptyRaid}
                   onSwitchRaidingTeam={switchRaidingTeam}
                 />
-              </div>
                <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
             </div>
             <div className="lg:col-start-3 space-y-8">
-              <div className="block lg:hidden">
-                 <ScoringControls 
-                    teams={teams} 
-                    raidingTeamId={raidingTeamId}
-                    onAddScore={handleAddScore} 
-                    onEmptyRaid={handleEmptyRaid}
-                    onSwitchRaidingTeam={switchRaidingTeam}
-                  />
-                </div>
               <FoulPlayAnalyzer />
             </div>
           </div>
