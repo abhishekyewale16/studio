@@ -90,7 +90,6 @@ export default function Home() {
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     const isRaidEvent = ['raid', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType);
     
-    // Reset raid counter if the scoring team gets raid or bonus points
     if (isRaidEvent) {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
@@ -98,7 +97,7 @@ export default function Home() {
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
         if (data.pointType === 'line-out') {
-             // For line-out, the point goes to the OTHER team
+             // Points awarded to opposing team
         } else if (data.pointType === 'lona-points') {
             teamScoreIncrement = data.points + 2;
         } else if (data.pointType === 'bonus') {
@@ -115,11 +114,10 @@ export default function Home() {
 
         return currentTeams.map(team => {
             if (data.pointType === 'line-out') {
-                // Award point to the team that did *not* commit the line out
                 if (team.id !== data.teamId) {
                     return { ...team, score: team.score + data.points };
                 }
-                return team; // No change for the team that committed the line out
+                return team;
             }
 
             if (team.id === data.teamId) {
@@ -166,7 +164,7 @@ export default function Home() {
                                     break;
                                 case 'tackle-lona':
                                     newPlayer.tacklePoints += data.points;
-                                    newPlayer.superTacklePoints += data.points; // Assuming all points from this are super tackle points
+                                    newPlayer.superTacklePoints += data.points;
                                     playerPointIncrement = data.points;
                                     break;
                                 case 'bonus':
@@ -186,18 +184,17 @@ export default function Home() {
         }) as [Team, Team];
     });
 
-    switchRaidingTeam();
+    if(!['tackle', 'tackle-lona'].includes(data.pointType)){
+        switchRaidingTeam();
+    }
   }, [switchRaidingTeam]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
     const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
     
-    // Find the currently raiding player to attribute the failed raid
     setTeams(currentTeams => {
         const raidingTeam = currentTeams.find(t => t.id === teamId);
-        // This is a simplification; in a real app you'd know the specific raider.
-        // We'll attribute it to the first player for demonstration.
         const raiderId = raidingTeam?.players[0].id; 
 
         return currentTeams.map(team => {
@@ -205,9 +202,6 @@ export default function Home() {
                 return {
                     ...team,
                     players: team.players.map(p => {
-                        // In a real scenario, you'd have a way to select the current raider.
-                        // Here, we just increment for the first player as an example.
-                        // A more robust solution might involve a dropdown in the "Empty Raid" dialog.
                         if (p.id === raiderId) {
                             return {...p, totalRaids: p.totalRaids + 1}
                         }
@@ -220,7 +214,7 @@ export default function Home() {
     });
 
 
-    if (currentRaids === 2) { // This was a Do or Die raid that failed
+    if (currentRaids === 2) { 
       const opposingTeamId = isTeam1 ? 2 : 1;
       const raidingTeamName = teams.find(t => t.id === teamId)?.name;
       const scoringTeamName = teams.find(t => t.id === opposingTeamId)?.name;
@@ -235,11 +229,9 @@ export default function Home() {
           variant: "destructive"
       });
 
-      // Reset the counter
       setRaidState(prev => isTeam1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
 
     } else {
-      // Increment the counter
       setRaidState(prev => isTeam1 ? { ...prev, team1: prev.team1 + 1 } : { ...prev, team2: prev.team2 + 1 });
       toast({
           title: "Empty Raid",
@@ -321,11 +313,10 @@ export default function Home() {
         const ws = XLSX.utils.json_to_sheet(teamDataForSheet, { origin: "A6" });
         XLSX.utils.sheet_add_aoa(ws, teamHeader, { origin: "A1" });
         
-        // Auto-fit columns
         const colWidths = Object.keys(teamDataForSheet[0] || {}).map(key => ({ wch: Math.max(key.length, ...teamDataForSheet.map(row => String(row[key as keyof typeof row]).length)) + 2 }));
         ws['!cols'] = colWidths;
         
-        XLSX.utils.book_append_sheet(wb, ws, team.name.substring(0, 31)); // Sheet names have a 31-char limit
+        XLSX.utils.book_append_sheet(wb, ws, team.name.substring(0, 31));
     });
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;

@@ -62,6 +62,7 @@ const formSchema = z.object({
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => {
+  // Player selection is optional only for 'line-out'
   if (data.pointType !== 'line-out') {
     return data.playerId && data.playerId.length > 0;
   }
@@ -79,32 +80,29 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      teamId: '',
+      teamId: String(raidingTeamId),
       pointType: 'raid',
       points: 1,
       playerId: '',
     },
   });
 
-  // Effect to automatically set the teamId in the form to the current raiding team
-  useEffect(() => {
-    form.setValue('teamId', String(raidingTeamId));
-  }, [raidingTeamId, form]);
-
-  const selectedTeamId = form.watch('teamId');
   const selectedPointType = form.watch('pointType');
-  const selectedTeam = teams.find(t => t.id === Number(selectedTeamId));
+  const isTackleEvent = ['tackle', 'tackle-lona'].includes(selectedPointType);
+  const effectiveTeamId = isTackleEvent ? (raidingTeamId === 1 ? '2' : '1') : String(raidingTeamId);
+
+  useEffect(() => {
+    form.setValue('teamId', effectiveTeamId);
+  }, [raidingTeamId, selectedPointType, form, effectiveTeamId]);
+  
+  const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     let points = values.points;
     if (['bonus'].includes(values.pointType)) points = 1;
 
-    // For tackle points, the point goes to the non-raiding team
-    const isTackleEvent = ['tackle', 'tackle-lona'].includes(values.pointType);
-    const scoringTeamId = isTackleEvent ? (raidingTeamId === 1 ? 2 : 1) : raidingTeamId;
-
     const data = {
-        teamId: scoringTeamId,
+        teamId: Number(values.teamId),
         playerId: values.playerId ? Number(values.playerId) : undefined,
         pointType: values.pointType,
         points: points,
@@ -113,8 +111,9 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     
     let toastDescription = `Added points for ${values.pointType.replace('-', ' ')}.`;
     if (values.pointType === 'line-out') {
-        const opposingTeam = teams.find(t => t.id !== Number(values.teamId));
-        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for line out.`;
+        const lineOutTeam = teams.find(t => t.id === raidingTeamId)
+        const opposingTeam = teams.find(t => t.id !== raidingTeamId);
+        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for ${lineOutTeam?.name}'s line out.`;
     }
 
     toast({
@@ -122,7 +121,12 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       description: toastDescription,
     })
     setOpen(false);
-    form.reset();
+    form.reset({
+        teamId: String(raidingTeamId === 1 ? 2: 1), // Pre-set for the next raid
+        pointType: 'raid',
+        points: 1,
+        playerId: '',
+    });
   }
 
   const getHelperText = () => {
@@ -143,9 +147,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         return null;
     }
   }
-
+  
   const helperText = getHelperText();
-  const showPlayerSelection = ['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona', 'line-out'].includes(selectedPointType);
+  const showPlayerSelection = true; 
+  const playerSelectTeamId = selectedPointType === 'line-out' ? raidingTeamId : Number(effectiveTeamId)
+  const playerSelectTeam = teams.find(t => t.id === playerSelectTeamId);
 
   return (
     <Card>
@@ -177,24 +183,19 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                   name="teamId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Team</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value} disabled>
+                      <FormLabel>Scoring Team</FormLabel>
+                       <Select onValueChange={field.onChange} value={field.value} disabled>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a team" />
-                          </SelectTrigger>
+                           <SelectTrigger>
+                                <SelectValue placeholder="Select a team" />
+                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {teams.map(team => (
-                            <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
-                          ))}
+                            {teams.map(team => (
+                                <SelectItem key={team.id} value={String(team.id)}>{team.name}</SelectItem>
+                            ))}
                         </SelectContent>
-                      </Select>
-                       {helperText && selectedPointType === 'line-out' && (
-                            <p className="text-xs text-muted-foreground pt-1">
-                                {helperText}
-                            </p>
-                        )}
+                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -207,7 +208,10 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     <FormItem className="space-y-3">
                       <FormLabel>Point Type</FormLabel>
                       <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-2">
+                        <RadioGroup onValueChange={(value) => {
+                          field.onChange(value);
+                          form.setValue('playerId', ''); // Reset player when type changes
+                        }} defaultValue={field.value} className="grid grid-cols-2 gap-2">
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="raid" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Swords className="w-4 h-4" /> Raid</FormLabel>
@@ -253,20 +257,22 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                     name="playerId"
                     render={({ field }) => (
                       <FormItem style={{ display: showPlayerSelection ? 'block' : 'none' }}>
-                        <FormLabel>Player</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedTeam}>
+                        <FormLabel>Player ({playerSelectTeam?.name})</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!playerSelectTeam}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a player" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {selectedTeam?.players.map(player => (
+                            {playerSelectTeam?.players.map(player => (
                               <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        {selectedPointType === 'line-out' && <p className="text-xs text-muted-foreground pt-1">Player selection is optional for line outs.</p>}
+                        {helperText && <p className="text-xs text-muted-foreground pt-1">{helperText}</p>}
+                        {selectedPointType === 'line-out' && <p className="text-xs text-muted-foreground pt-1">Select player who is out. Point goes to other team.</p>}
+
                         <FormMessage />
                       </FormItem>
                     )}
@@ -288,20 +294,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
                         <FormControl>
                           <Input type="number" placeholder="e.g., 1" {...field} />
                         </FormControl>
-                         {helperText && !['line-out', 'tackle', 'tackle-lona'].includes(selectedPointType) && (
-                            <p className="text-xs text-muted-foreground pt-1">
-                                {helperText}
-                            </p>
-                        )}
+                         
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-                 {['tackle', 'tackle-lona'].includes(selectedPointType) && (
-                    <p className="text-xs text-muted-foreground pt-1">
-                        {helperText}
-                    </p>
                 )}
 
 
