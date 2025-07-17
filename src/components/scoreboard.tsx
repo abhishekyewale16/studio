@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { Team } from '@/lib/types';
 import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -59,18 +59,25 @@ const EditableField = ({ value, onSave, className, icon }: EditableFieldProps) =
 interface TeamDisplayProps {
   team: Team;
   raidCount: number;
+  isRaiding: boolean;
   alignment: 'left' | 'right';
   onNameChange: (teamId: number, newName: string) => void;
   onCoachChange: (teamId: number, newCoach: string) => void;
   onCityChange: (teamId: number, newCity: string) => void;
 }
 
-const TeamDisplay = ({ team, raidCount, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
+const TeamDisplay = ({ team, raidCount, isRaiding, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
 
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
         <div className="flex items-center gap-3">
-            {alignment === 'right' && raidCount === 2 && (
+            {alignment === 'right' && isRaiding && (
+                <Badge variant="default" className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3"/>
+                    Raiding
+                </Badge>
+            )}
+             {alignment === 'right' && raidCount === 2 && (
                  <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
                     <AlertTriangle className="w-3 h-3"/>
                     Do or Die
@@ -85,6 +92,12 @@ const TeamDisplay = ({ team, raidCount, alignment, onNameChange, onCoachChange, 
                  <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
                     <AlertTriangle className="w-3 h-3"/>
                     Do or Die
+                </Badge>
+            )}
+            {alignment === 'left' && isRaiding && (
+                 <Badge variant="default" className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3"/>
+                    Raiding
                 </Badge>
             )}
         </div>
@@ -113,6 +126,7 @@ interface ScoreboardProps {
     half: 1 | 2;
   };
   raidState: RaidState;
+  raidingTeamId: number;
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
@@ -120,7 +134,7 @@ interface ScoreboardProps {
   onTeamCityChange: (teamId: number, newCity: string) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   return (
@@ -133,7 +147,7 @@ export function Scoreboard({ teams, timer, raidState, onToggleTimer, onResetTime
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center text-center gap-4">
-          <TeamDisplay team={teams[0]} raidCount={raidState.team1} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay team={teams[0]} raidCount={raidState.team1} isRaiding={raidingTeamId === teams[0].id} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
           
           <div className="flex flex-col items-center order-first md:order-none">
             <div className="text-5xl md:text-6xl font-bold tracking-tighter">
@@ -153,7 +167,7 @@ export function Scoreboard({ teams, timer, raidState, onToggleTimer, onResetTime
             </div>
           </div>
           
-          <TeamDisplay team={teams[1]} raidCount={raidState.team2} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay team={teams[1]} raidCount={raidState.team2} isRaiding={raidingTeamId === teams[1].id} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
         </div>
         <div className="mt-6 flex justify-center gap-2">
           <Button onClick={onToggleTimer} size="sm" disabled={timer.minutes === 0 && timer.seconds === 0 && timer.half === 2}>

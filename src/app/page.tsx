@@ -22,12 +22,17 @@ export default function Home() {
   const { toast } = useToast();
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
   const [raidState, setRaidState] = useState<RaidState>({ team1: 0, team2: 0 });
+  const [raidingTeamId, setRaidingTeamId] = useState<number>(1);
   const [timer, setTimer] = useState({
     minutes: MATCH_DURATION_MINUTES,
     seconds: 0,
     isRunning: false,
     half: 1 as 1 | 2,
   });
+
+  const switchRaidingTeam = useCallback(() => {
+    setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
+  }, []);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -76,6 +81,7 @@ export default function Home() {
       half: 1,
     });
     setRaidState({ team1: 0, team2: 0 });
+    setRaidingTeamId(1);
     // A deep copy is needed to reset players too
     setTeams(JSON.parse(JSON.stringify(initialTeams)));
   }, []);
@@ -160,7 +166,9 @@ export default function Home() {
             return team;
         }) as [Team, Team];
     });
-  }, []);
+
+    switchRaidingTeam();
+  }, [switchRaidingTeam]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
@@ -192,7 +200,10 @@ export default function Home() {
           description: `Raid count for ${teams.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
       });
     }
-  }, [raidState, teams, toast]);
+
+    switchRaidingTeam();
+
+  }, [raidState, teams, toast, switchRaidingTeam]);
 
 
   const handleTeamNameChange = useCallback((teamId: number, newName: string) => {
@@ -251,6 +262,7 @@ export default function Home() {
                 teams={teams}
                 timer={timer}
                 raidState={raidState}
+                raidingTeamId={raidingTeamId}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
                 onTeamNameChange={handleTeamNameChange}
@@ -259,7 +271,13 @@ export default function Home() {
               />
             </div>
             <div className="lg:col-start-3">
-              <ScoringControls teams={teams} onAddScore={handleAddScore} onEmptyRaid={handleEmptyRaid} />
+              <ScoringControls 
+                teams={teams} 
+                raidingTeamId={raidingTeamId}
+                onAddScore={handleAddScore} 
+                onEmptyRaid={handleEmptyRaid}
+                onSwitchRaidingTeam={switchRaidingTeam}
+              />
             </div>
           </div>
 

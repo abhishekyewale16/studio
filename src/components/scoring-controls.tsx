@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,7 +34,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus, Ban } from 'lucide-react';
+import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -50,8 +50,10 @@ import {
 
 interface ScoringControlsProps {
   teams: [Team, Team];
+  raidingTeamId: number;
   onAddScore: (data: { teamId: number; playerId?: number; pointType: string; points: number }) => void;
   onEmptyRaid: (teamId: number) => void;
+  onSwitchRaidingTeam: () => void;
 }
 
 const formSchema = z.object({
@@ -60,7 +62,6 @@ const formSchema = z.object({
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => {
-  // Player selection is required for all types except line-out
   if (data.pointType !== 'line-out') {
     return data.playerId && data.playerId.length > 0;
   }
@@ -71,7 +72,7 @@ const formSchema = z.object({
 });
 
 
-export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringControlsProps) {
+export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast()
 
@@ -85,6 +86,11 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
     },
   });
 
+  // Effect to automatically set the teamId in the form to the current raiding team
+  useEffect(() => {
+    form.setValue('teamId', String(raidingTeamId));
+  }, [raidingTeamId, form]);
+
   const selectedTeamId = form.watch('teamId');
   const selectedPointType = form.watch('pointType');
   const selectedTeam = teams.find(t => t.id === Number(selectedTeamId));
@@ -93,8 +99,12 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
     let points = values.points;
     if (['bonus'].includes(values.pointType)) points = 1;
 
+    // For tackle points, the point goes to the non-raiding team
+    const isTackleEvent = ['tackle', 'tackle-lona'].includes(values.pointType);
+    const scoringTeamId = isTackleEvent ? (raidingTeamId === 1 ? 2 : 1) : raidingTeamId;
+
     const data = {
-        teamId: Number(values.teamId),
+        teamId: scoringTeamId,
         playerId: values.playerId ? Number(values.playerId) : undefined,
         pointType: values.pointType,
         points: points,
@@ -124,7 +134,9 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
       case 'lona-bonus-points':
         return 'The bonus and 2 Lona points will be added automatically.';
       case 'tackle-lona':
-        return 'The 2 Lona points will be added automatically.';
+        return 'Select the tackling player. Point(s) and Lona awarded to their team.';
+      case 'tackle':
+        return 'Select the tackling player. The point will be awarded to their team.';
       case 'line-out':
         return 'Select the team of the player(s) who stepped out. The point(s) will be given to the opposing team.';
       default:
@@ -155,7 +167,7 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
             <DialogHeader>
               <DialogTitle>Register a Scoring Event</DialogTitle>
               <DialogDescription>
-                Select the team, player, and type of point to award.
+                Select the team, player, and type of point to award. The raid will switch automatically.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -166,7 +178,7 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Team</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a team" />
@@ -242,7 +254,7 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
                     render={({ field }) => (
                       <FormItem style={{ display: showPlayerSelection ? 'block' : 'none' }}>
                         <FormLabel>Player</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedTeam}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedTeam}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select a player" />
@@ -276,7 +288,7 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
                         <FormControl>
                           <Input type="number" placeholder="e.g., 1" {...field} />
                         </FormControl>
-                         {helperText && selectedPointType !== 'line-out' && (
+                         {helperText && !['line-out', 'tackle', 'tackle-lona'].includes(selectedPointType) && (
                             <p className="text-xs text-muted-foreground pt-1">
                                 {helperText}
                             </p>
@@ -286,6 +298,12 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
                     )}
                   />
                 )}
+                 {['tackle', 'tackle-lona'].includes(selectedPointType) && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                        {helperText}
+                    </p>
+                )}
+
 
                 <DialogFooter>
                   <Button type="submit">Add Points</Button>
@@ -306,20 +324,20 @@ export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringContr
               <AlertDialogHeader>
               <AlertDialogTitle>Declare Empty Raid?</AlertDialogTitle>
               <AlertDialogDescription>
-                  Select the team that performed an empty raid. This will increment their empty raid counter. If this is their 3rd consecutive empty raid, the opposing team will be awarded one point.
+                  This will count as an empty raid for the currently raiding team ({teams.find(t => t.id === raidingTeamId)?.name}) and switch the raid to the other team.
               </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter className="sm:justify-around pt-4">
-                  <Button variant="secondary" onClick={() => onEmptyRaid(teams[0].id)}>
-                      {teams[0].name}
-                  </Button>
-                  <Button variant="secondary" onClick={() => onEmptyRaid(teams[1].id)}>
-                      {teams[1].name}
-                  </Button>
+              <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onEmptyRaid(raidingTeamId)}>Confirm</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam}>
+          <Replace className="mr-2 h-4 w-4" />
+          Switch Raiding Team
+        </Button>
 
       </CardContent>
     </Card>
