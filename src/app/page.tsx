@@ -94,7 +94,7 @@ export default function Home() {
             if (data.pointType === 'line-out') {
                 // Award point to the team that did *not* commit the line out
                 if (team.id !== data.teamId) {
-                    return { ...team, score: team.score + 1 };
+                    return { ...team, score: team.score + data.points };
                 }
                 return team; // No change for the team that committed the line out
             }

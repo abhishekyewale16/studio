@@ -55,15 +55,6 @@ const formSchema = z.object({
 }, {
   message: "Player selection is required for this point type.",
   path: ["playerId"],
-}).refine(data => {
-    // For line-out, player is also required.
-    if (data.pointType === 'line-out') {
-        return data.playerId && data.playerId.length > 0;
-    }
-    return true;
-}, {
-    message: "Please select the player who stepped out.",
-    path: ["playerId"],
 });
 
 export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
@@ -86,8 +77,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     let points = values.points;
-    // For these types, the 'points' value is from the form, but the bonus/lona points are calculated in handleAddScore
-    if (['bonus', 'line-out'].includes(values.pointType)) points = 1;
+    if (['bonus'].includes(values.pointType)) points = 1;
 
     const data = {
         teamId: Number(values.teamId),
@@ -100,7 +90,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
     let toastDescription = `Added points for ${values.pointType.replace('-', ' ')}.`;
     if (values.pointType === 'line-out') {
         const opposingTeam = teams.find(t => t.id !== Number(values.teamId));
-        toastDescription = `Point awarded to ${opposingTeam?.name} for line out.`;
+        toastDescription = `${values.points} point(s) awarded to ${opposingTeam?.name} for line out.`;
     }
 
     toast({
@@ -122,13 +112,14 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
       case 'tackle-lona':
         return 'The 2 Lona points will be added automatically.';
       case 'line-out':
-        return 'Select the team of the player who stepped out. The point will be given to the opposing team.';
+        return 'Select the team of the player(s) who stepped out. The point(s) will be given to the opposing team.';
       default:
         return null;
     }
   }
 
   const helperText = getHelperText();
+  const showPlayerSelection = selectedPointType !== 'line-out' && ['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona'].includes(selectedPointType);
 
   return (
     <Card>
@@ -233,7 +224,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                     control={form.control}
                     name="playerId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem style={{ display: showPlayerSelection || selectedPointType === 'line-out' ? 'block' : 'none' }}>
                         <FormLabel>Player</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedTeam}>
                           <FormControl>
@@ -247,13 +238,14 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                             ))}
                           </SelectContent>
                         </Select>
+                        {selectedPointType === 'line-out' && <p className="text-xs text-muted-foreground pt-1">Player selection is optional for line outs.</p>}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 
                 
-                {(selectedPointType === 'raid' || selectedPointType === 'tackle' || selectedPointType === 'raid-bonus' || selectedPointType === 'lona-points' || selectedPointType === 'lona-bonus-points' || selectedPointType === 'tackle-lona') && (
+                {(selectedPointType !== 'bonus') && (
                   <FormField
                     control={form.control}
                     name="points"
@@ -261,7 +253,8 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                       <FormItem>
                         <FormLabel>
                           {selectedPointType === 'raid-bonus' || selectedPointType === 'lona-bonus-points' ? 'Raid Points' :
-                          selectedPointType === 'tackle-lona' ? 'Tackle Points' : 'Points'}
+                          selectedPointType === 'tackle-lona' ? 'Tackle Points' :
+                          selectedPointType === 'line-out' ? 'Number of Players' : 'Points'}
                         </FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="e.g., 1" {...field} />
