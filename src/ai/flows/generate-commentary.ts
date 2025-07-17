@@ -20,6 +20,7 @@ const GenerateCommentaryInputSchema = z.object({
   isSuperRaid: z.boolean().describe("Whether the raid was a super raid."),
   isDoOrDie: z.boolean().describe("Whether the raid was a do-or-die raid."),
   isBonus: z.boolean().optional().describe("Whether a bonus point was scored."),
+  isLona: z.boolean().optional().describe("Whether a Lona was scored."),
   commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.'),
   team1Score: z.number().describe("The score of team 1."),
   team2Score: z.number().describe("The score of team 2."),
@@ -74,6 +75,9 @@ const prompt = ai.definePrompt({
   {{/if}}
   {{#if isDoOrDie}}
   This was a DO OR DIE raid!
+  {{/if}}
+  {{#if isLona}}
+  This resulted in a LONA!
   {{/if}}
 
   Based on all this information, generate a single, exciting commentary line.

@@ -140,7 +140,10 @@ export default function Home() {
         teamScoreIncrement = data.points;
     }
 
-    const newTeams = teams.map(team => {
+    let commentaryData;
+    let tempTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    
+    const newTeams = tempTeams.map(team => {
         if (data.pointType === 'line-out') {
             if (team.id !== data.teamId) {
                 return { ...team, score: team.score + data.points };
@@ -189,6 +192,7 @@ export default function Home() {
                             case 'tackle':
                             case 'tackle-lona':
                                 newPlayer.tacklePoints += data.points;
+                                newPlayer.totalPoints += data.points;
                                 if(data.pointType === 'tackle-lona') newPlayer.superTacklePoints += data.points;
                                 playerPointIncrement = data.points;
                                 break;
@@ -208,7 +212,6 @@ export default function Home() {
         return team;
     }) as [Team, Team];
 
-    let commentaryData;
     const [team1, team2] = newTeams;
     
     if (data.pointType === 'line-out') {
@@ -224,6 +227,7 @@ export default function Home() {
             isSuperRaid: false,
             isDoOrDie: false,
             isBonus: false,
+            isLona: false,
             raidCount: data.teamId === 1 ? raidState.team1 : raidState.team2,
             team1Score: team1.score,
             team2Score: team2.score,
@@ -249,6 +253,7 @@ export default function Home() {
           isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
           isDoOrDie: currentRaidCount === 2,
           isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
+          isLona: data.pointType.includes('lona'),
           raidCount: currentRaidCount,
           team1Score: team1.score,
           team2Score: team2.score,
@@ -261,7 +266,7 @@ export default function Home() {
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
     }
-  }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
+  }, [teams, raidState, addCommentary, switchRaidingTeam]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
@@ -299,7 +304,11 @@ export default function Home() {
       const opposingTeamId = isTeam1 ? 2 : 1;
       const raidingTeamName = teams.find(t => t.id === teamId)?.name;
       const scoringTeamName = teams.find(t => t.id === opposingTeamId)?.name;
-      const [team1, team2] = teams;
+      
+      const newTeams = teams.map(team => 
+        team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
+      ) as [Team, Team];
+      const [team1, team2] = newTeams;
       
       addCommentary({
           eventType: 'do_or_die_fail',
@@ -310,14 +319,13 @@ export default function Home() {
           isSuperRaid: false,
           isDoOrDie: true,
           isBonus: false,
+          isLona: false,
           raidCount: currentRaids,
-          team1Score: team1.id === opposingTeamId ? team1.score + 1 : team1.score,
-          team2Score: team2.id === opposingTeamId ? team2.score + 1 : team2.score,
+          team1Score: team1.score,
+          team2Score: team2.score,
       });
 
-      setTeams(currentTeams => currentTeams.map(team => 
-        team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
-      ) as [Team, Team]);
+      setTeams(newTeams);
 
       toast({
           title: "Do or Die Raid Failed!",
@@ -343,6 +351,7 @@ export default function Home() {
           isSuperRaid: false,
           isDoOrDie: false,
           isBonus: false,
+          isLona: false,
           raidCount: currentRaids,
           team1Score: team1.score,
           team2Score: team2.score
