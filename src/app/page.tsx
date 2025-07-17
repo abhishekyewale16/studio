@@ -124,12 +124,20 @@ export default function Home() {
             <p className="text-muted-foreground mt-2">The ultimate tool for managing Kabaddi matches.</p>
           </header>
 
-          <Scoreboard
-            teams={teams}
-            timer={timer}
-            onToggleTimer={handleToggleTimer}
-            onResetTimer={handleResetTimer}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            <div className="lg:col-span-2">
+               <Scoreboard
+                teams={teams}
+                timer={timer}
+                onToggleTimer={handleToggleTimer}
+                onResetTimer={handleResetTimer}
+              />
+            </div>
+            <div className="row-start-2 lg:row-start-1 lg:col-start-3">
+              <ScoringControls teams={teams} onAddScore={handleAddScore} />
+            </div>
+          </div>
+
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
@@ -137,8 +145,7 @@ export default function Home() {
               <PlayerStatsTable team={teams[1]} />
             </div>
             
-            <div className="space-y-8 lg:sticky lg:top-8">
-              <ScoringControls teams={teams} onAddScore={handleAddScore} />
+            <div className="space-y-8">
               <FoulPlayAnalyzer />
             </div>
           </div>
