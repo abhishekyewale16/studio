@@ -25,7 +25,6 @@ const GenerateCommentaryInputSchema = z.object({
   commentaryHistory: z.array(z.string()).optional().describe('A brief history of the last few commentary snippets to maintain context.'),
   team1Score: z.number().describe("The score of team 1."),
   team2Score: z.number().describe("The score of team 2."),
-  timer: z.string().describe("The current match time remaining, e.g., '15:32'."),
   raidCount: z.number().describe("The current consecutive empty raid count for the raiding team."),
 });
 export type GenerateCommentaryInput = z.infer<typeof GenerateCommentaryInputSchema>;
@@ -46,7 +45,6 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert, high-energy Kabaddi commentator. Your job is to provide exciting, concise commentary for live match events. Keep it short and punchy, like a real-time update. Use the provided context to make your commentary more descriptive.
 
   Match Context:
-  - Time Remaining: {{timer}}
   - Current Empty Raids for {{raidingTeam}}: {{raidCount}}
   - Last few commentary lines for context:
     {{#if commentaryHistory}}

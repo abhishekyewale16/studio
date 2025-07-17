@@ -51,7 +51,6 @@ export default function Home() {
         const fullEventData = {
           ...eventData,
           commentaryHistory: history,
-          timer: `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`,
         }
 
         const result = await generateCommentary(fullEventData);
@@ -63,7 +62,7 @@ export default function Home() {
     } finally {
         setIsCommentaryLoading(false);
     }
-  }, [commentaryLog, timer]);
+  }, [commentaryLog]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -594,8 +593,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    
-
