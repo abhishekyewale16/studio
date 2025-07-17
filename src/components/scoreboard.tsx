@@ -8,53 +8,80 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+
+interface EditableFieldProps {
+    value: string;
+    onSave: (newValue: string) => void;
+    className?: string;
+    icon?: React.ReactNode;
+}
+
+const EditableField = ({ value, onSave, className, icon }: EditableFieldProps) => {
+    const [currentValue, setCurrentValue] = useState(value);
+
+    useEffect(() => {
+        setCurrentValue(value);
+    }, [value]);
+
+    const handleBlur = () => {
+        if (currentValue.trim() && currentValue !== value) {
+            onSave(currentValue);
+        } else {
+            setCurrentValue(value);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleBlur();
+            e.currentTarget.blur();
+        }
+    };
+
+    return (
+        <div className={cn("flex items-center gap-2 text-muted-foreground", className)}>
+            {icon}
+            <Input
+                type="text"
+                value={currentValue}
+                onChange={(e) => setCurrentValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 w-full"
+            />
+        </div>
+    );
+};
 
 interface TeamDisplayProps {
   team: Team;
   alignment: 'left' | 'right';
   onNameChange: (teamId: number, newName: string) => void;
+  onCoachChange: (teamId: number, newCoach: string) => void;
+  onCityChange: (teamId: number, newCity: string) => void;
 }
 
-const TeamDisplay = ({ team, alignment, onNameChange }: TeamDisplayProps) => {
-  const [name, setName] = useState(team.name);
-
-  useEffect(() => {
-    setName(team.name);
-  }, [team.name]);
-
-  const handleBlur = () => {
-    if (name.trim() && name !== team.name) {
-      onNameChange(team.id, name);
-    } else {
-        setName(team.name);
-    }
-  };
-  
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleBlur();
-      e.currentTarget.blur();
-    }
-  };
+const TeamDisplay = ({ team, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
 
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
-      <Input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+      <EditableField 
+        value={team.name}
+        onSave={(newName) => onNameChange(team.id, newName)}
+        className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit"
       />
-      <div className="flex items-center gap-2 text-muted-foreground mt-1">
-        <Users className="w-4 h-4" />
-        <span>{team.coach}</span>
-      </div>
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <MapPin className="w-4 h-4" />
-        <span>{team.city}</span>
-      </div>
+      <EditableField 
+        value={team.coach}
+        onSave={(newCoach) => onCoachChange(team.id, newCoach)}
+        icon={<Users className="w-4 h-4" />}
+        className="mt-1"
+      />
+       <EditableField 
+        value={team.city}
+        onSave={(newCity) => onCityChange(team.id, newCity)}
+        icon={<MapPin className="w-4 h-4" />}
+      />
     </div>
   );
 };
@@ -71,9 +98,11 @@ interface ScoreboardProps {
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
+  onTeamCoachChange: (teamId: number, newCoach: string) => void;
+  onTeamCityChange: (teamId: number, newCity: string) => void;
 }
 
-export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNameChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   return (
@@ -86,7 +115,7 @@ export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNa
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center text-center gap-4">
-          <TeamDisplay team={teams[0]} alignment="left" onNameChange={onTeamNameChange} />
+          <TeamDisplay team={teams[0]} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
           
           <div className="flex flex-col items-center order-first md:order-none">
             <div className="text-5xl md:text-6xl font-bold tracking-tighter">
@@ -106,7 +135,7 @@ export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNa
             </div>
           </div>
           
-          <TeamDisplay team={teams[1]} alignment="right" onNameChange={onTeamNameChange} />
+          <TeamDisplay team={teams[1]} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
         </div>
         <div className="mt-6 flex justify-center gap-2">
           <Button onClick={onToggleTimer} size="sm" disabled={timer.minutes === 0 && timer.seconds === 0 && timer.half === 2}>
