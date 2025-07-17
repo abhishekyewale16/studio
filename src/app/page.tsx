@@ -55,12 +55,12 @@ export default function Home() {
     };
   }, [timer.isRunning]);
 
-  const handleToggleTimer = () => {
+  const handleToggleTimer = useCallback(() => {
     if(timer.minutes === 0 && timer.seconds === 0 && timer.half === 2) return;
     setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
-  };
+  }, [timer.minutes, timer.seconds, timer.half]);
 
-  const handleResetTimer = () => {
+  const handleResetTimer = useCallback(() => {
     setTimer({
       minutes: MATCH_DURATION_MINUTES,
       seconds: 0,
@@ -69,7 +69,7 @@ export default function Home() {
     });
     // A deep copy is needed to reset players too
     setTeams(JSON.parse(JSON.stringify(initialTeams)));
-  };
+  }, []);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     setTeams(currentTeams => {
