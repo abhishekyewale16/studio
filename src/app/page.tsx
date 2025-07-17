@@ -120,6 +120,7 @@ export default function Home() {
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     let newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const isRaidEvent = !['tackle', 'tackle-lona', 'line-out'].includes(data.pointType);
+    const isTackleEvent = data.pointType.includes('tackle');
 
     if (isRaidEvent) {
         const teamKey = data.teamId === 1 ? 'team1' : 'team2';
@@ -153,7 +154,7 @@ export default function Home() {
         if (data.playerId) {
             const playerIndex = newTeams[scoringTeamIndex].players.findIndex(p => p.id === data.playerId);
             if (playerIndex !== -1) {
-                const player = newTeams[scoringTeamIndex].players[playerIndex];
+                const player = newTeams[scoringTeam_index].players[playerIndex];
                 let playerPointIncrement = 0;
                 const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
 
@@ -188,7 +189,7 @@ export default function Home() {
                     case 'tackle-lona':
                         player.tacklePoints += data.points;
                         if (data.points === 2) {
-                            player.superTacklePoints += 1; // It's a count, not points.
+                            player.superTacklePoints += 1;
                         }
                         playerPointIncrement = data.points;
                         break;
@@ -209,9 +210,8 @@ export default function Home() {
     const defendingTeam = newTeams.find(t => t.id !== data.teamId)!;
     const player = scoringTeam.players.find(p => p.id === data.playerId);
 
-    const isTackleEvent = data.pointType.includes('tackle');
     const raidingTeamForCommentary = isTackleEvent ? defendingTeam : scoringTeam;
-    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : defendingTeam; // Corrected this line
+    const defendingTeamForCommentary = isTackleEvent ? scoringTeam : defendingTeam; 
     const currentRaidCount = raidingTeamId === 1 ? raidState.team1 : raidState.team2;
     const totalPointsInRaid = data.points + (['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType) ? 1 : 0);
     const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
@@ -233,7 +233,7 @@ export default function Home() {
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
-        // Assuming first player of raiding team is the raider. This might need to be more specific.
+        // This is a simplification. In a real app, you'd know who was raiding.
         raiderForCommentary = originalRaidingTeam?.players[0]?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else { // raid event
@@ -253,11 +253,8 @@ export default function Home() {
         isBonus: ['raid-bonus', 'bonus', 'lona-bonus-points'].includes(data.pointType),
         isLona: data.pointType.includes('lona'),
         raidCount: currentRaidCount,
-        team1Score: team1ScoreAfterUpdate,
-        team2Score: team2ScoreAfterUpdate,
     };
     
-
     addCommentary(commentaryData);
     setTeams(newTeams);
     switchRaidingTeam();
@@ -294,7 +291,6 @@ export default function Home() {
       const newTeamsWithScore = newTeamsWithRaidStat.map(team => 
         team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
       ) as [Team, Team];
-      const [team1, team2] = newTeamsWithScore;
       
       addCommentary({
           eventType: 'do_or_die_fail',
@@ -307,8 +303,6 @@ export default function Home() {
           isBonus: false,
           isLona: false,
           raidCount: currentRaids,
-          team1Score: team1.score,
-          team2Score: team2.score,
       });
 
       finalTeams = newTeamsWithScore;
@@ -327,7 +321,6 @@ export default function Home() {
           title: "Empty Raid",
           description: `Raid count for ${newTeamsWithRaidStat.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
       });
-      const [team1, team2] = newTeamsWithRaidStat;
        addCommentary({
           eventType: 'empty_raid',
           raidingTeam: raidingTeam.name,
@@ -339,8 +332,6 @@ export default function Home() {
           isBonus: false,
           isLona: false,
           raidCount: currentRaids,
-          team1Score: team1.score,
-          team2Score: team2.score
       });
     }
 
@@ -393,7 +384,39 @@ export default function Home() {
 
   const handleExportStats = () => {
     const wb = XLSX.utils.book_new();
+    const [team1, team2] = teams;
 
+    // --- Styling ---
+    const headerStyle = { font: { bold: true, color: { rgb: "FFFFFFFF" } }, fill: { fgColor: { rgb: "FFD32F2F" } }, alignment: { horizontal: "center", vertical: "center" } };
+    const centeredStyle = { alignment: { horizontal: "center", vertical: "center" } };
+    const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+
+    // --- Match Summary Sheet ---
+    const summaryData = [
+      [`${team1.name} vs ${team2.name} - Match Summary`],
+      [],
+      ["Final Score"],
+      [`${team1.name}`, team1.score],
+      [`${team2.name}`, team2.score],
+      [],
+      ["Result"],
+      [team1.score > team2.score ? `${team1.name} Won` : team2.score > team1.score ? `${team2.name} Won` : "Match Drawn"]
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    wsSummary["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, // Title
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } }, // Final Score
+      { s: { r: 6, c: 0 }, e: { r: 6, c: 1 } }, // Result
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 1 } }  // Winner
+    ];
+    wsSummary['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
+    wsSummary['A3'].s = { font: { bold: true, sz: 14 } };
+    wsSummary['A7'].s = { font: { bold: true, sz: 14 } };
+    wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Match Summary");
+
+
+    // --- Team Sheets ---
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
@@ -404,22 +427,61 @@ export default function Home() {
             "Super Tackles": p.superTacklePoints,
             "Total Raids": p.totalRaids,
             "Successful Raids": p.successfulRaids,
-            "Success Rate (%)": p.totalRaids > 0 ? ((p.successfulRaids / p.totalRaids) * 100).toFixed(2) : 0,
+            "Success Rate (%)": p.totalRaids > 0 ? parseFloat(((p.successfulRaids / p.totalRaids) * 100).toFixed(2)) : 0,
             "Super Raids": p.superRaids
         }));
 
         const teamHeader = [
-            ["Team:", team.name],
-            ["Coach:", team.coach],
-            ["City:", team.city],
-            ["Final Score:", team.score],
-            [] // Empty row for spacing
+            [team.name],
+            [],
+            ["Coach:", team.coach, "", "City:", team.city, "", "Final Score:", team.score],
+            []
         ];
 
-        const ws = XLSX.utils.json_to_sheet(teamDataForSheet, { origin: "A6" });
-        XLSX.utils.sheet_add_aoa(ws, teamHeader, { origin: "A1" });
+        const ws = XLSX.utils.aoa_to_sheet(teamHeader, { origin: "A1" });
+        XLSX.utils.sheet_add_json(ws, teamDataForSheet, { origin: "A5" });
+
+        // Merges
+        ws["!merges"] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: teamDataForSheet[0] ? Object.keys(teamDataForSheet[0]).length - 1 : 10 } },
+        ];
         
-        const colWidths = Object.keys(teamDataForSheet[0] || {}).map(key => ({ wch: Math.max(key.length, ...teamDataForSheet.map(row => String(row[key as keyof typeof row]).length)) + 2 }));
+        // --- Apply Styles ---
+        // Title
+        ws['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
+
+        // Headers
+        const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:J5');
+        for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
+            const cellAddress = XLSX.utils.encode_cell({ r: 4, c: C });
+            if (ws[cellAddress]) {
+                ws[cellAddress].s = headerStyle;
+            }
+        }
+        
+        // Data and Borders
+        const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:J${5 + team.players.length}`);
+        for (let R = dataRange.s.r + 5; R <= dataRange.e.r; ++R) {
+            for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellAddress]) continue;
+                
+                ws[cellAddress].s = { ...ws[cellAddress].s, border };
+                
+                // Center numeric data
+                if (typeof ws[cellAddress].v === 'number') {
+                    ws[cellAddress].s = { ...ws[cellAddress].s, ...centeredStyle };
+                }
+            }
+        }
+        
+        // Column Widths
+        const colWidths = Object.keys(teamDataForSheet[0] || {}).map((key, i) => ({ 
+            wch: Math.max(
+                key.length, 
+                ...teamDataForSheet.map(row => String(row[key as keyof typeof row]).length)
+            ) + 2 
+        }));
         ws['!cols'] = colWidths;
         
         XLSX.utils.book_append_sheet(wb, ws, team.name.substring(0, 31));
@@ -504,3 +566,5 @@ export default function Home() {
     </>
   );
 }
+
+    
