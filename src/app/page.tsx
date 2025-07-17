@@ -74,14 +74,31 @@ export default function Home() {
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
-        if (data.pointType === 'lona-points') teamScoreIncrement = data.points + 2;
-        else if (data.pointType === 'bonus') teamScoreIncrement = 1;
-        else if (data.pointType === 'raid-bonus') teamScoreIncrement = data.points + 1;
-        else if (data.pointType === 'lona-bonus-points') teamScoreIncrement = data.points + 1 + 2;
-        else if (data.pointType === 'tackle-lona') teamScoreIncrement = data.points + 2;
-        else teamScoreIncrement = data.points;
+        if (data.pointType === 'line-out') {
+             // For line-out, the point goes to the OTHER team
+        } else if (data.pointType === 'lona-points') {
+            teamScoreIncrement = data.points + 2;
+        } else if (data.pointType === 'bonus') {
+            teamScoreIncrement = 1;
+        } else if (data.pointType === 'raid-bonus') {
+            teamScoreIncrement = data.points + 1;
+        } else if (data.pointType === 'lona-bonus-points') {
+            teamScoreIncrement = data.points + 1 + 2;
+        } else if (data.pointType === 'tackle-lona') {
+            teamScoreIncrement = data.points + 2;
+        } else {
+            teamScoreIncrement = data.points;
+        }
 
         return currentTeams.map(team => {
+            if (data.pointType === 'line-out') {
+                // Award point to the team that did *not* commit the line out
+                if (team.id !== data.teamId) {
+                    return { ...team, score: team.score + 1 };
+                }
+                return team; // No change for the team that committed the line out
+            }
+
             if (team.id === data.teamId) {
                 const updatedTeam = { ...team, score: team.score + teamScoreIncrement };
 
