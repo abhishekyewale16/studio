@@ -121,6 +121,30 @@ export default function Home() {
     });
   }, []);
 
+  const handleTeamNameChange = useCallback((teamId: number, newName: string) => {
+    setTeams(currentTeams =>
+      currentTeams.map(team =>
+        team.id === teamId ? { ...team, name: newName } : team
+      ) as [Team, Team]
+    );
+  }, []);
+
+  const handlePlayerNameChange = useCallback((teamId: number, playerId: number, newName: string) => {
+    setTeams(currentTeams =>
+      currentTeams.map(team => {
+        if (team.id === teamId) {
+          return {
+            ...team,
+            players: team.players.map(player =>
+              player.id === playerId ? { ...player, name: newName } : player
+            ),
+          };
+        }
+        return team;
+      }) as [Team, Team]
+    );
+  }, []);
+
   return (
     <>
       <main className="min-h-screen bg-background text-foreground font-body">
@@ -137,9 +161,10 @@ export default function Home() {
                 timer={timer}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
+                onTeamNameChange={handleTeamNameChange}
               />
             </div>
-            <div className="row-start-3 lg:row-start-1 lg:col-start-3">
+            <div className="lg:col-start-3">
               <ScoringControls teams={teams} onAddScore={handleAddScore} />
             </div>
           </div>
@@ -147,8 +172,8 @@ export default function Home() {
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <PlayerStatsTable team={teams[0]} />
-              <PlayerStatsTable team={teams[1]} />
+              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} />
+              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} />
             </div>
             
             <div className="space-y-8 lg:col-start-3">

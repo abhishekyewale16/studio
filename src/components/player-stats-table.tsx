@@ -1,4 +1,4 @@
-import type { Team } from '@/lib/types';
+import type { Team, Player } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -8,13 +8,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { User } from 'lucide-react';
 
 interface PlayerStatsTableProps {
   team: Team;
+  onPlayerNameChange: (teamId: number, playerId: number, newName: string) => void;
 }
 
-export function PlayerStatsTable({ team }: PlayerStatsTableProps) {
+export function PlayerStatsTable({ team, onPlayerNameChange }: PlayerStatsTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -38,7 +40,14 @@ export function PlayerStatsTable({ team }: PlayerStatsTableProps) {
             <TableBody>
               {team.players.map((player) => (
                 <TableRow key={player.id}>
-                  <TableCell className="font-medium">{player.name}</TableCell>
+                  <TableCell className="font-medium">
+                     <Input
+                        type="text"
+                        value={player.name}
+                        onChange={(e) => onPlayerNameChange(team.id, player.id, e.target.value)}
+                        className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                  </TableCell>
                   <TableCell className="text-center">{player.raidPoints}</TableCell>
                   <TableCell className="text-center">{player.tacklePoints}</TableCell>
                   <TableCell className="text-center">{player.bonusPoints}</TableCell>

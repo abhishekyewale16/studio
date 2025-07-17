@@ -3,6 +3,7 @@ import type { Team } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 interface ScoreboardProps {
   teams: [Team, Team];
@@ -14,14 +15,20 @@ interface ScoreboardProps {
   };
   onToggleTimer: () => void;
   onResetTimer: () => void;
+  onTeamNameChange: (teamId: number, newName: string) => void;
 }
 
-export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNameChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   const TeamDisplay = ({ team, alignment }: { team: Team; alignment: 'left' | 'right' }) => (
-    <div className={`flex flex-col items-center ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
-      <h2 className="text-2xl md:text-3xl font-bold font-headline text-primary">{team.name}</h2>
+    <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
+      <Input
+        type="text"
+        value={team.name}
+        onChange={(e) => onTeamNameChange(team.id, e.target.value)}
+        className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto"
+      />
       <div className="flex items-center gap-2 text-muted-foreground mt-1">
         <Users className="w-4 h-4" />
         <span>{team.coach}</span>
