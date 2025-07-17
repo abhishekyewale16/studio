@@ -270,29 +270,35 @@ export default function Home() {
     
     addCommentary(commentaryData);
     setTeams(newTeams);
-    switchRaidingTeam();
+    if (!isTackleEvent) {
+        switchRaidingTeam();
+    } else {
+        // After a successful tackle, the other team raids.
+        // The raidingTeamId is NOT the scoring team's ID.
+        // So we don't need to switch it. The current raidingTeamId is correct for the next raid.
+    }
 
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
 
 
-  const handleEmptyRaid = useCallback((teamId: number) => {
+  const handleEmptyRaid = useCallback((teamId: number, playerId: number) => {
     const isTeam1 = teamId === 1;
     const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
     
-    let raidingTeamPlayerId: number | undefined;
-
     const newTeamsWithRaidStat = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     
     const raidingTeamIndex = newTeamsWithRaidStat.findIndex(t => t.id === teamId);
     if(raidingTeamIndex !== -1) {
-        const raider = newTeamsWithRaidStat[raidingTeamIndex].players[0]; // Assuming first player is raider for empty raid
-        raidingTeamPlayerId = raider.id;
-        raider.totalRaids += 1;
+        const playerIndex = newTeamsWithRaidStat[raidingTeamIndex].players.findIndex(p => p.id === playerId);
+        if (playerIndex !== -1) {
+            const raider = newTeamsWithRaidStat[raidingTeamIndex].players[playerIndex];
+            raider.totalRaids += 1;
+        }
     }
     
     const raidingTeam = newTeamsWithRaidStat.find(t => t.id === teamId)!;
     const defendingTeam = newTeamsWithRaidStat.find(t => t.id !== teamId)!;
-    const player = raidingTeam.players.find(p => p.id === raidingTeamPlayerId);
+    const player = raidingTeam.players.find(p => p.id === playerId);
     const isDoOrDieRaid = currentRaids === 2;
     let finalTeams = newTeamsWithRaidStat;
     

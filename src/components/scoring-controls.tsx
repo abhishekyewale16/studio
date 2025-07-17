@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useForm as useEmptyRaidForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import type { Team } from '@/lib/types';
@@ -36,23 +36,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus, Ban, Replace } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 
 interface ScoringControlsProps {
   teams: [Team, Team];
   raidingTeamId: number;
   onAddScore: (data: { teamId: number; playerId?: number; pointType: string; points: number }) => void;
-  onEmptyRaid: (teamId: number) => void;
+  onEmptyRaid: (teamId: number, playerId: number) => void;
   onSwitchRaidingTeam: () => void;
   isTimerRunning: boolean;
 }
@@ -96,9 +85,14 @@ const formSchema = z.object({
     path: ["points"],
 });
 
+const emptyRaidSchema = z.object({
+    playerId: z.string().min(1, { message: "Please select the raider." }),
+});
+
 
 export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam, isTimerRunning }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
+  const [emptyRaidDialogOpen, setEmptyRaidDialogOpen] = useState(false);
   const { toast } = useToast()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -111,8 +105,17 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
     },
   });
 
+  const emptyRaidForm = useEmptyRaidForm<z.infer<typeof emptyRaidSchema>>({
+    resolver: zodResolver(emptyRaidSchema),
+    defaultValues: {
+        playerId: ''
+    }
+  });
+
   const selectedPointType = form.watch('pointType');
   const isTackleEvent = selectedPointType === 'tackle' || selectedPointType === 'tackle-lona';
+  const raidingTeam = teams.find(t => t.id === raidingTeamId);
+
 
   // Set the correct teamId when the modal opens or raidingTeamId changes
   useEffect(() => {
@@ -125,6 +128,12 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       }
     }
   }, [raidingTeamId, open, form]);
+
+  useEffect(() => {
+    if (!emptyRaidDialogOpen) {
+        emptyRaidForm.reset({ playerId: '' });
+    }
+  }, [emptyRaidDialogOpen, emptyRaidForm]);
   
   const selectedTeam = teams.find(t => t.id === Number(form.watch('teamId')));
 
@@ -158,6 +167,11 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
         points: 1,
         playerId: '',
     });
+  }
+
+  function onEmptyRaidSubmit(values: z.infer<typeof emptyRaidSchema>) {
+    onEmptyRaid(raidingTeamId, Number(values.playerId));
+    setEmptyRaidDialogOpen(false);
   }
   
   const handlePointTypeChange = (value: string) => {
@@ -392,26 +406,52 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
           </DialogContent>
         </Dialog>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full" disabled={!isTimerRunning}>
-                <Ban className="mr-2 h-4 w-4" />
-                Empty Raid
-              </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-              <AlertDialogHeader>
-              <AlertDialogTitle>Declare Empty Raid?</AlertDialogTitle>
-              <AlertDialogDescription>
-                  This will count as an empty raid for the currently raiding team ({teams.find(t => t.id === raidingTeamId)?.name}) and switch the raid to the other team.
-              </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onEmptyRaid(raidingTeamId)}>Confirm</AlertDialogAction>
-              </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Dialog open={emptyRaidDialogOpen} onOpenChange={setEmptyRaidDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="w-full" disabled={!isTimerRunning}>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Empty Raid
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Declare Empty Raid</DialogTitle>
+                    <DialogDescription>
+                        Select the player who performed the empty raid for the currently raiding team ({raidingTeam?.name}). This will switch the raid to the other team.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form {...emptyRaidForm}>
+                    <form onSubmit={emptyRaidForm.handleSubmit(onEmptyRaidSubmit)} className="space-y-4">
+                        <FormField
+                            control={emptyRaidForm.control}
+                            name="playerId"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Raiding Player</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value} disabled={!raidingTeam}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a player" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {raidingTeam?.players.map(player => (
+                                                <SelectItem key={player.id} value={String(player.id)}>{player.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setEmptyRaidDialogOpen(false)}>Cancel</Button>
+                            <Button type="submit">Confirm Empty Raid</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
 
         <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam} disabled={!isTimerRunning}>
           <Replace className="mr-2 h-4 w-4" />
