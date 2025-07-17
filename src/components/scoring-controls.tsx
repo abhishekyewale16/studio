@@ -54,6 +54,7 @@ interface ScoringControlsProps {
   onAddScore: (data: { teamId: number; playerId?: number; pointType: string; points: number }) => void;
   onEmptyRaid: (teamId: number) => void;
   onSwitchRaidingTeam: () => void;
+  isTimerRunning: boolean;
 }
 
 const formSchema = z.object({
@@ -96,7 +97,7 @@ const formSchema = z.object({
 });
 
 
-export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam }: ScoringControlsProps) {
+export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid, onSwitchRaidingTeam, isTimerRunning }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast()
 
@@ -218,7 +219,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
       <CardContent className="flex flex-col gap-2">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button className="w-full">Add Score Event</Button>
+            <Button className="w-full" disabled={!isTimerRunning}>Add Score Event</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
@@ -393,7 +394,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
 
         <AlertDialog>
           <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" disabled={!isTimerRunning}>
                 <Ban className="mr-2 h-4 w-4" />
                 Empty Raid
               </Button>
@@ -412,7 +413,7 @@ export function ScoringControls({ teams, raidingTeamId, onAddScore, onEmptyRaid,
           </AlertDialogContent>
         </AlertDialog>
 
-        <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam}>
+        <Button variant="ghost" className="w-full" onClick={onSwitchRaidingTeam} disabled={!isTimerRunning}>
           <Replace className="mr-2 h-4 w-4" />
           Switch Raiding Team
         </Button>

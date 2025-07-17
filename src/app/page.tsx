@@ -571,6 +571,7 @@ export default function Home() {
                   onAddScore={handleAddScore} 
                   onEmptyRaid={handleEmptyRaid}
                   onSwitchRaidingTeam={switchRaidingTeam}
+                  isTimerRunning={timer.isRunning}
                 />
                <LiveCommentary commentaryLog={commentaryLog} isLoading={isCommentaryLoading} onExportCommentary={handleExportCommentary} />
             </div>
@@ -597,3 +598,4 @@ export default function Home() {
     
 
     
+
