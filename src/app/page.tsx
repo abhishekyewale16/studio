@@ -9,11 +9,19 @@ import { PlayerStatsTable } from '@/components/player-stats-table';
 import { ScoringControls } from '@/components/scoring-controls';
 import { FoulPlayAnalyzer } from '@/components/foul-play-analyzer';
 import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
 
 const MATCH_DURATION_MINUTES = 20; // Per half
 
+export type RaidState = {
+  team1: number;
+  team2: number;
+}
+
 export default function Home() {
+  const { toast } = useToast();
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
+  const [raidState, setRaidState] = useState<RaidState>({ team1: 0, team2: 0 });
   const [timer, setTimer] = useState({
     minutes: MATCH_DURATION_MINUTES,
     seconds: 0,
@@ -67,11 +75,18 @@ export default function Home() {
       isRunning: false,
       half: 1,
     });
+    setRaidState({ team1: 0, team2: 0 });
     // A deep copy is needed to reset players too
     setTeams(JSON.parse(JSON.stringify(initialTeams)));
   }, []);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
+    
+    // Reset raid counter if the scoring team gets raid or bonus points
+    if (['raid', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType)) {
+      setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
+    }
+
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
         if (data.pointType === 'line-out') {
@@ -125,9 +140,6 @@ export default function Home() {
                                     playerPointIncrement = data.points + 1;
                                     break;
                                 case 'tackle':
-                                    newPlayer.tacklePoints += data.points;
-                                    playerPointIncrement = data.points;
-                                    break;
                                 case 'tackle-lona':
                                     newPlayer.tacklePoints += data.points;
                                     playerPointIncrement = data.points;
@@ -149,6 +161,39 @@ export default function Home() {
         }) as [Team, Team];
     });
   }, []);
+
+  const handleEmptyRaid = useCallback((teamId: number) => {
+    const isTeam1 = teamId === 1;
+    const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
+    
+    if (currentRaids === 2) { // This was a Do or Die raid that failed
+      const opposingTeamId = isTeam1 ? 2 : 1;
+      const raidingTeamName = teams.find(t => t.id === teamId)?.name;
+      const scoringTeamName = teams.find(t => t.id === opposingTeamId)?.name;
+
+      setTeams(currentTeams => currentTeams.map(team => 
+        team.id === opposingTeamId ? { ...team, score: team.score + 1 } : team
+      ) as [Team, Team]);
+      
+      toast({
+          title: "Do or Die Raid Failed!",
+          description: `1 point awarded to ${scoringTeamName} as ${raidingTeamName} failed to score.`,
+          variant: "destructive"
+      });
+
+      // Reset the counter
+      setRaidState(prev => isTeam1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
+
+    } else {
+      // Increment the counter
+      setRaidState(prev => isTeam1 ? { ...prev, team1: prev.team1 + 1 } : { ...prev, team2: prev.team2 + 1 });
+      toast({
+          title: "Empty Raid",
+          description: `Raid count for ${teams.find(t => t.id === teamId)?.name} is now ${currentRaids + 1}.`,
+      });
+    }
+  }, [raidState, teams, toast]);
+
 
   const handleTeamNameChange = useCallback((teamId: number, newName: string) => {
     setTeams(currentTeams =>
@@ -205,6 +250,7 @@ export default function Home() {
                <Scoreboard
                 teams={teams}
                 timer={timer}
+                raidState={raidState}
                 onToggleTimer={handleToggleTimer}
                 onResetTimer={handleResetTimer}
                 onTeamNameChange={handleTeamNameChange}
@@ -213,7 +259,7 @@ export default function Home() {
               />
             </div>
             <div className="lg:col-start-3">
-              <ScoringControls teams={teams} onAddScore={handleAddScore} />
+              <ScoringControls teams={teams} onAddScore={handleAddScore} onEmptyRaid={handleEmptyRaid} />
             </div>
           </div>
 

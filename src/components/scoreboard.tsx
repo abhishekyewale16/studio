@@ -2,13 +2,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw } from 'lucide-react';
+import { Timer, Users, Trophy, MapPin, Play, Pause, RefreshCw, AlertTriangle } from 'lucide-react';
 import type { Team } from '@/lib/types';
+import type { RaidState } from '@/app/page';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface EditableFieldProps {
     value: string;
@@ -56,21 +58,36 @@ const EditableField = ({ value, onSave, className, icon }: EditableFieldProps) =
 
 interface TeamDisplayProps {
   team: Team;
+  raidCount: number;
   alignment: 'left' | 'right';
   onNameChange: (teamId: number, newName: string) => void;
   onCoachChange: (teamId: number, newCoach: string) => void;
   onCityChange: (teamId: number, newCity: string) => void;
 }
 
-const TeamDisplay = ({ team, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
+const TeamDisplay = ({ team, raidCount, alignment, onNameChange, onCoachChange, onCityChange }: TeamDisplayProps) => {
 
   return (
     <div className={`flex flex-col items-center gap-2 ${alignment === 'left' ? 'md:items-end' : 'md:items-start'}`}>
-      <EditableField 
-        value={team.name}
-        onSave={(newName) => onNameChange(team.id, newName)}
-        className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit"
-      />
+        <div className="flex items-center gap-3">
+            {alignment === 'right' && raidCount === 2 && (
+                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
+                    <AlertTriangle className="w-3 h-3"/>
+                    Do or Die
+                </Badge>
+            )}
+            <EditableField 
+                value={team.name}
+                onSave={(newName) => onNameChange(team.id, newName)}
+                className="text-2xl md:text-3xl font-bold font-headline text-primary text-center md:text-inherit"
+            />
+             {alignment === 'left' && raidCount === 2 && (
+                 <Badge variant="destructive" className="flex items-center gap-1.5 animate-pulse">
+                    <AlertTriangle className="w-3 h-3"/>
+                    Do or Die
+                </Badge>
+            )}
+        </div>
       <EditableField 
         value={team.coach}
         onSave={(newCoach) => onCoachChange(team.id, newCoach)}
@@ -95,6 +112,7 @@ interface ScoreboardProps {
     isRunning: boolean;
     half: 1 | 2;
   };
+  raidState: RaidState;
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
@@ -102,7 +120,7 @@ interface ScoreboardProps {
   onTeamCityChange: (teamId: number, newCity: string) => void;
 }
 
-export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
 
   return (
@@ -115,7 +133,7 @@ export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNa
       </CardHeader>
       <CardContent className="p-4 md:p-6">
         <div className="grid grid-cols-1 md:grid-cols-3 items-center text-center gap-4">
-          <TeamDisplay team={teams[0]} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay team={teams[0]} raidCount={raidState.team1} alignment="left" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
           
           <div className="flex flex-col items-center order-first md:order-none">
             <div className="text-5xl md:text-6xl font-bold tracking-tighter">
@@ -135,7 +153,7 @@ export function Scoreboard({ teams, timer, onToggleTimer, onResetTimer, onTeamNa
             </div>
           </div>
           
-          <TeamDisplay team={teams[1]} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
+          <TeamDisplay team={teams[1]} raidCount={raidState.team2} alignment="right" onNameChange={onTeamNameChange} onCoachChange={onTeamCoachChange} onCityChange={onTeamCityChange} />
         </div>
         <div className="mt-6 flex justify-center gap-2">
           <Button onClick={onToggleTimer} size="sm" disabled={timer.minutes === 0 && timer.seconds === 0 && timer.half === 2}>

@@ -33,13 +33,25 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClipboardPlus, Star, Shield, Swords, Award, PlusSquare, UserMinus, Ban } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 interface ScoringControlsProps {
   teams: [Team, Team];
   onAddScore: (data: { teamId: number; playerId?: number; pointType: string; points: number }) => void;
+  onEmptyRaid: (teamId: number) => void;
 }
 
 const formSchema = z.object({
@@ -48,7 +60,8 @@ const formSchema = z.object({
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => {
-  if (['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona'].includes(data.pointType)) {
+  // Player selection is required for all types except line-out
+  if (data.pointType !== 'line-out') {
     return data.playerId && data.playerId.length > 0;
   }
   return true;
@@ -57,7 +70,8 @@ const formSchema = z.object({
   path: ["playerId"],
 });
 
-export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
+
+export function ScoringControls({ teams, onAddScore, onEmptyRaid }: ScoringControlsProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast()
 
@@ -119,7 +133,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
   }
 
   const helperText = getHelperText();
-  const showPlayerSelection = selectedPointType !== 'line-out' && ['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona'].includes(selectedPointType);
+  const showPlayerSelection = ['raid', 'tackle', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona', 'line-out'].includes(selectedPointType);
 
   return (
     <Card>
@@ -128,9 +142,11 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
           <ClipboardPlus className="text-primary" />
           Update Score
         </CardTitle>
+        <CardDescription>
+            Add points for raids, tackles, and other events, or declare an empty raid.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
-        <p className="mb-4 text-muted-foreground">Add points for raids, tackles, bonuses, or a lona for a team.</p>
+      <CardContent className="flex flex-col gap-2">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="w-full">Add Score Event</Button>
@@ -190,15 +206,11 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                           </FormItem>
                            <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="raid-bonus" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><PlusSquare className="w-4 h-4" /> Bonus + Points</FormLabel>
+                            <FormLabel className="font-normal flex items-center gap-2"><PlusSquare className="w-4 h-4" /> Raid + Bonus</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="bonus" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="tackle-lona" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Tackle + Lona</FormLabel>
                           </FormItem>
                            <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona-bonus-points" /></FormControl>
@@ -206,7 +218,11 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona-points" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona + Points</FormLabel>
+                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona + Raid Pts</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="tackle-lona" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Tackle + Lona</FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="line-out" /></FormControl>
@@ -224,7 +240,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                     control={form.control}
                     name="playerId"
                     render={({ field }) => (
-                      <FormItem style={{ display: showPlayerSelection || selectedPointType === 'line-out' ? 'block' : 'none' }}>
+                      <FormItem style={{ display: showPlayerSelection ? 'block' : 'none' }}>
                         <FormLabel>Player</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedTeam}>
                           <FormControl>
@@ -254,6 +270,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                         <FormLabel>
                           {selectedPointType === 'raid-bonus' || selectedPointType === 'lona-bonus-points' ? 'Raid Points' :
                           selectedPointType === 'tackle-lona' ? 'Tackle Points' :
+                           selectedPointType === 'lona-points' ? 'Raid Points' :
                           selectedPointType === 'line-out' ? 'Number of Players' : 'Points'}
                         </FormLabel>
                         <FormControl>
@@ -277,6 +294,33 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
             </Form>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <Ban className="mr-2 h-4 w-4" />
+                Empty Raid
+              </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+              <AlertDialogTitle>Declare Empty Raid?</AlertDialogTitle>
+              <AlertDialogDescription>
+                  Select the team that performed an empty raid. This will increment their empty raid counter. If this is their 3rd consecutive empty raid, the opposing team will be awarded one point.
+              </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="sm:justify-around pt-4">
+                  <Button variant="secondary" onClick={() => onEmptyRaid(teams[0].id)}>
+                      {teams[0].name}
+                  </Button>
+                  <Button variant="secondary" onClick={() => onEmptyRaid(teams[1].id)}>
+                      {teams[1].name}
+                  </Button>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </CardContent>
     </Card>
   );
