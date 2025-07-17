@@ -45,7 +45,6 @@ export default function Home() {
     setIsCommentaryLoading(true);
     try {
         const history = commentaryLog.slice(-3); // Keep last 3 for context
-        const raidingTeam = teams.find(t => t.id === raidingTeamId)!;
         const [team1, team2] = teams;
         
         const fullEventData = {
@@ -54,7 +53,6 @@ export default function Home() {
           team1Score: team1.score,
           team2Score: team2.score,
           timer: `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`,
-          raidCount: raidingTeamId === 1 ? raidState.team1 : raidState.team2,
         }
 
         const result = await generateCommentary(fullEventData);
@@ -66,7 +64,7 @@ export default function Home() {
     } finally {
         setIsCommentaryLoading(false);
     }
-  }, [commentaryLog, teams, timer, raidState, raidingTeamId]);
+  }, [commentaryLog, teams, timer]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -128,8 +126,49 @@ export default function Home() {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
 
-    let commentaryData: any = {};
+    let commentaryData: any;
 
+    const scoringTeam = teams.find(t => t.id === data.teamId)!;
+    const defendingTeam = teams.find(t => t.id !== data.teamId)!;
+    
+    if (data.pointType === 'line-out') {
+        const outTeam = teams.find(t => t.id === raidingTeamId)!;
+        const awardedTeam = teams.find(t => t.id !== raidingTeamId)!;
+        const outPlayer = outTeam.players.find(p => p.id === data.playerId);
+        commentaryData = {
+            eventType: 'line_out',
+            raidingTeam: outTeam.name,
+            defendingTeam: awardedTeam.name,
+            raiderName: outPlayer?.name ?? 'Unknown Player',
+            defenderName: undefined,
+            points: data.points,
+            isSuperRaid: false,
+            isDoOrDie: false,
+            raidCount: raidingTeamId === 1 ? raidState.team1 : raidState.team2,
+        };
+    } else {
+        const player = scoringTeam.players.find(p => p.id === data.playerId);
+        const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
+        const defendingTeamForCommentary = data.pointType.includes('tackle') ? scoringTeam : defendingTeam;
+        const currentRaidCount = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
+        const totalPointsInRaid = data.points + (data.pointType.includes('bonus') ? 1 : 0);
+        const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+
+        commentaryData = {
+          eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
+          raidingTeam: raidingTeamForCommentary.name,
+          defendingTeam: defendingTeamForCommentary.name,
+          raiderName: player?.name ?? 'Unknown Player',
+          defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
+          points: data.points,
+          isSuperRaid: isSuccessfulRaid && totalPointsInRaid >= 3,
+          isDoOrDie: currentRaidCount === 2,
+          raidCount: currentRaidCount
+        };
+    }
+
+    addCommentary(commentaryData);
+    
     setTeams(currentTeams => {
         let teamScoreIncrement = 0;
         if (data.pointType === 'line-out') {
@@ -147,41 +186,6 @@ export default function Home() {
         } else {
             teamScoreIncrement = data.points;
         }
-
-        const scoringTeam = currentTeams.find(t => t.id === data.teamId)!;
-        const defendingTeam = currentTeams.find(t => t.id !== data.teamId)!;
-        const player = scoringTeam.players.find(p => p.id === data.playerId);
-        const raidingTeamForCommentary = data.pointType.includes('tackle') ? defendingTeam : scoringTeam;
-        const currentRaidingTeamState = raidingTeamForCommentary.id === 1 ? raidState.team1 : raidState.team2;
-
-
-        if(data.pointType === 'line-out') {
-            const outTeam = currentTeams.find(t => t.id === data.teamId)!;
-            const awardedTeam = currentTeams.find(t => t.id !== data.teamId)!;
-            const outPlayer = outTeam.players.find(p => p.id === data.playerId);
-            commentaryData = {
-                eventType: 'line_out',
-                raidingTeam: outTeam.name,
-                defendingTeam: awardedTeam.name,
-                raiderName: outPlayer?.name ?? 'Unknown Player',
-                defenderName: undefined,
-                points: data.points,
-                isSuperRaid: false,
-                isDoOrDie: false,
-            }
-        } else {
-            commentaryData = {
-              eventType: data.pointType.includes('tackle') ? 'tackle_score' : 'raid_score',
-              raidingTeam: raidingTeamForCommentary.name,
-              defendingTeam: data.pointType.includes('tackle') ? scoringTeam.name : defendingTeam.name,
-              raiderName: player?.name ?? 'Unknown Player',
-              defenderName: data.pointType.includes('tackle') ? (player?.name ?? 'Unknown Player') : undefined,
-              points: data.points,
-              isSuperRaid: false, // Default value
-              isDoOrDie: currentRaidingTeamState === 2,
-            };
-        }
-
 
         return currentTeams.map(team => {
             if (data.pointType === 'line-out') {
@@ -211,7 +215,6 @@ export default function Home() {
                             
                             if (isSuccessfulRaid && totalPointsInRaid >= 3) {
                                 newPlayer.superRaids += 1;
-                                commentaryData.isSuperRaid = true;
                             }
 
                             switch (data.pointType) {
@@ -253,12 +256,10 @@ export default function Home() {
         }) as [Team, Team];
     });
 
-    addCommentary(commentaryData);
-
     if(!['tackle', 'tackle-lona'].includes(data.pointType)){
         switchRaidingTeam();
     }
-  }, [switchRaidingTeam, addCommentary, raidState, teams]);
+  }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
 
   const handleEmptyRaid = useCallback((teamId: number) => {
     const isTeam1 = teamId === 1;
@@ -315,6 +316,7 @@ export default function Home() {
           points: 1,
           isSuperRaid: false,
           isDoOrDie: true,
+          raidCount: currentRaids
       });
 
       setRaidState(prev => isTeam1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
@@ -333,6 +335,7 @@ export default function Home() {
           points: 0,
           isSuperRaid: false,
           isDoOrDie: false,
+          raidCount: currentRaids
       });
     }
 
