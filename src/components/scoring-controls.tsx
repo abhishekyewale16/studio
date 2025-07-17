@@ -44,7 +44,7 @@ interface ScoringControlsProps {
 
 const formSchema = z.object({
   teamId: z.string().min(1, { message: 'Please select a team.' }),
-  pointType: z.enum(['raid', 'tackle', 'bonus', 'lona', 'raid-bonus', 'lona-points', 'lona-bonus-points']),
+  pointType: z.enum(['raid', 'tackle', 'bonus', 'lona', 'raid-bonus', 'lona-points', 'lona-bonus-points', 'tackle-lona']),
   points: z.coerce.number().min(1, { message: 'Points must be at least 1.' }).max(10, { message: 'Points cannot exceed 10.' }),
   playerId: z.string().optional(),
 }).refine(data => data.pointType === 'lona' || (data.playerId && data.playerId.length > 0), {
@@ -76,6 +76,7 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
     if (values.pointType === 'lona') points = 2;
     if (values.pointType === 'raid-bonus') points = values.points; // The total points from raid, bonus is handled in handleAddScore
     if (values.pointType === 'lona-bonus-points') points = values.points; // The total points from raid, bonus and lona are handled in handleAddScore
+    if (values.pointType === 'tackle-lona') points = values.points; // The total points from tackle and lona are handled in handleAddScore
 
     const data = {
         teamId: Number(values.teamId),
@@ -100,6 +101,8 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
         return 'The 2 Lona points will be added automatically.';
       case 'lona-bonus-points':
         return 'The bonus and 2 Lona points will be added automatically.';
+      case 'tackle-lona':
+        return 'The 2 Lona points will be added automatically.';
       default:
         return null;
     }
@@ -177,6 +180,14 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                             <FormControl><RadioGroupItem value="bonus" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Star className="w-4 h-4" /> Bonus Only</FormLabel>
                           </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="tackle-lona" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Tackle + Lona</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="lona" /></FormControl>
+                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona Only</FormLabel>
+                          </FormItem>
                            <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona-bonus-points" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona+Bonus+Pts</FormLabel>
@@ -184,10 +195,6 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl><RadioGroupItem value="lona-points" /></FormControl>
                             <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona + Points</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="lona" /></FormControl>
-                            <FormLabel className="font-normal flex items-center gap-2"><Award className="w-4 h-4" /> Lona Only</FormLabel>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
@@ -221,13 +228,16 @@ export function ScoringControls({ teams, onAddScore }: ScoringControlsProps) {
                   />
                 )}
                 
-                {(selectedPointType === 'raid' || selectedPointType === 'tackle' || selectedPointType === 'raid-bonus' || selectedPointType === 'lona-points' || selectedPointType === 'lona-bonus-points') && (
+                {(selectedPointType === 'raid' || selectedPointType === 'tackle' || selectedPointType === 'raid-bonus' || selectedPointType === 'lona-points' || selectedPointType === 'lona-bonus-points' || selectedPointType === 'tackle-lona') && (
                   <FormField
                     control={form.control}
                     name="points"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{selectedPointType === 'raid-bonus' || selectedPointType === 'lona-bonus-points' ? 'Raid Points' : 'Points'}</FormLabel>
+                        <FormLabel>
+                          {selectedPointType === 'raid-bonus' || selectedPointType === 'lona-bonus-points' ? 'Raid Points' :
+                          selectedPointType === 'tackle-lona' ? 'Tackle Points' : 'Points'}
+                        </FormLabel>
                         <FormControl>
                           <Input type="number" placeholder="e.g., 1" {...field} />
                         </FormControl>
