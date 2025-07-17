@@ -5,6 +5,10 @@ export interface Player {
   tacklePoints: number;
   bonusPoints: number;
   totalPoints: number;
+  totalRaids: number;
+  successfulRaids: number;
+  superRaids: number;
+  superTacklePoints: number;
 }
 
 export interface Team {

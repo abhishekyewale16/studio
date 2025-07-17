@@ -14,6 +14,10 @@ export const initialTeams: [Team, Team] = [
       tacklePoints: 0,
       bonusPoints: 0,
       totalPoints: 0,
+      totalRaids: 0,
+      successfulRaids: 0,
+      superRaids: 0,
+      superTacklePoints: 0,
     })),
   },
   {
@@ -29,6 +33,10 @@ export const initialTeams: [Team, Team] = [
       tacklePoints: 0,
       bonusPoints: 0,
       totalPoints: 0,
+      totalRaids: 0,
+      successfulRaids: 0,
+      superRaids: 0,
+      superTacklePoints: 0,
     })),
   },
 ];

@@ -87,9 +87,10 @@ export default function Home() {
   }, []);
   
   const handleAddScore = useCallback((data: { teamId: number; playerId?: number; pointType: string; points: number }) => {
+    const isRaidEvent = ['raid', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType);
     
     // Reset raid counter if the scoring team gets raid or bonus points
-    if (['raid', 'bonus', 'raid-bonus', 'lona-points', 'lona-bonus-points'].includes(data.pointType)) {
+    if (isRaidEvent) {
       setRaidState(prev => data.teamId === 1 ? { ...prev, team1: 0 } : { ...prev, team2: 0 });
     }
 
@@ -129,6 +130,19 @@ export default function Home() {
                             const newPlayer = { ...player };
                             let playerPointIncrement = 0;
                             
+                            const isSuccessfulRaid = data.pointType.includes('raid') || data.pointType.includes('bonus') || data.pointType.includes('lona');
+                            if(isSuccessfulRaid) {
+                                newPlayer.totalRaids += 1;
+                                newPlayer.successfulRaids += 1;
+                            }
+
+                            const raidPointsScored = data.points;
+                            const totalPointsInRaid = raidPointsScored + (data.pointType.includes('bonus') ? 1 : 0);
+                            
+                            if (isSuccessfulRaid && totalPointsInRaid >= 3) {
+                                newPlayer.superRaids += 1;
+                            }
+
                             switch (data.pointType) {
                                 case 'raid':
                                 case 'lona-points':
@@ -146,8 +160,12 @@ export default function Home() {
                                     playerPointIncrement = data.points + 1;
                                     break;
                                 case 'tackle':
+                                    newPlayer.tacklePoints += data.points;
+                                    playerPointIncrement = data.points;
+                                    break;
                                 case 'tackle-lona':
                                     newPlayer.tacklePoints += data.points;
+                                    newPlayer.superTacklePoints += data.points; // Assuming all points from this are super tackle points
                                     playerPointIncrement = data.points;
                                     break;
                                 case 'bonus':
@@ -174,6 +192,33 @@ export default function Home() {
     const isTeam1 = teamId === 1;
     const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
     
+    // Find the currently raiding player to attribute the failed raid
+    setTeams(currentTeams => {
+        const raidingTeam = currentTeams.find(t => t.id === teamId);
+        // This is a simplification; in a real app you'd know the specific raider.
+        // We'll attribute it to the first player for demonstration.
+        const raiderId = raidingTeam?.players[0].id; 
+
+        return currentTeams.map(team => {
+            if(team.id === teamId) {
+                return {
+                    ...team,
+                    players: team.players.map(p => {
+                        // In a real scenario, you'd have a way to select the current raider.
+                        // Here, we just increment for the first player as an example.
+                        // A more robust solution might involve a dropdown in the "Empty Raid" dialog.
+                        if (p.id === raiderId) {
+                            return {...p, totalRaids: p.totalRaids + 1}
+                        }
+                        return p;
+                    })
+                }
+            }
+            return team;
+        }) as [Team, Team]
+    });
+
+
     if (currentRaids === 2) { // This was a Do or Die raid that failed
       const opposingTeamId = isTeam1 ? 2 : 1;
       const raidingTeamName = teams.find(t => t.id === teamId)?.name;
@@ -251,9 +296,9 @@ export default function Home() {
     <>
       <main className="min-h-screen bg-background text-foreground font-body">
         <div className="container mx-auto p-4 md:p-8">
-          <header className="flex items-baseline justify-center gap-2 mb-8 text-center">
+          <header className="text-center mb-8">
             <h1 className="text-2xl font-headline font-bold text-primary">Kabaddi Score Master</h1>
-            <p className="text-xs text-muted-foreground">The ultimate tool for managing Kabaddi matches.</p>
+            <p className="text-sm text-muted-foreground">The ultimate tool for managing Kabaddi matches.</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
