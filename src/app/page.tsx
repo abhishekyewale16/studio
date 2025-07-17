@@ -59,10 +59,15 @@ export default function Home() {
         }
     } catch (error) {
         console.error("Error generating commentary:", error);
+        toast({
+            title: "Commentary Error",
+            description: "The AI commentator is busy. Please try again in a moment.",
+            variant: "destructive",
+        });
     } finally {
         setIsCommentaryLoading(false);
     }
-  }, [commentaryLog]);
+  }, [commentaryLog, toast]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
