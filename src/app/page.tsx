@@ -166,17 +166,17 @@ export default function Home() {
     setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
     setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
 
-    const newTeams = [...teams] as [Team, Team];
+    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const teamIndex = newTeams.findIndex(t => t.id === teamId);
     if (teamIndex !== -1) {
         newTeams[teamIndex].timeoutsRemaining -= 1;
+        setTeams(newTeams);
+        toast({
+            title: "Timeout Called",
+            description: `${newTeams[teamIndex].name} has called a timeout.`,
+        });
     }
-    setTeams(newTeams);
 
-    toast({
-        title: "Timeout Called",
-        description: `${teamToUpdate.name} has called a timeout.`,
-    });
 }, [teams, timer.isRunning, timer.isTimeout, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
@@ -681,7 +681,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    
