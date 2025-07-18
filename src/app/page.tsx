@@ -149,26 +149,29 @@ export default function Home() {
   }, [matchDuration]);
   
   const handleTakeTimeout = useCallback((teamId: number) => {
+    const teamToUpdate = teams.find(t => t.id === teamId);
+    
+    if (!teamToUpdate || teamToUpdate.timeoutsRemaining <= 0 || !timer.isRunning || timer.isTimeout) {
+        return;
+    }
+
+    setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
+    setSubstitutionsMadeThisBreak(0);
+
     setTeams(currentTeams => {
-        const teamIndex = currentTeams.findIndex(t => t.id === teamId);
-        if (teamIndex === -1 || currentTeams[teamIndex].timeoutsRemaining <= 0 || !timer.isRunning || timer.isTimeout) {
-            return currentTeams;
-        }
-
-        setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
-
         const newTeams = [...currentTeams] as [Team, Team];
-        newTeams[teamIndex].timeoutsRemaining -= 1;
-        setSubstitutionsMadeThisBreak(0);
-
-        toast({
-            title: "Timeout Called",
-            description: `${newTeams[teamIndex].name} has called a timeout.`,
-        });
-
+        const teamIndex = newTeams.findIndex(t => t.id === teamId);
+        if (teamIndex !== -1) {
+            newTeams[teamIndex].timeoutsRemaining -= 1;
+        }
         return newTeams;
     });
-  }, [timer.isRunning, timer.isTimeout, toast]);
+
+    toast({
+        title: "Timeout Called",
+        description: `${teamToUpdate.name} has called a timeout.`,
+    });
+}, [teams, timer.isRunning, timer.isTimeout, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
     const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
