@@ -76,7 +76,7 @@ export default function Home() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (timer.isRunning) {
+    if (timer.isRunning && !timer.isTimeout) {
       interval = setInterval(() => {
         setTimer(prev => {
           if (prev.seconds > 0) {
@@ -85,18 +85,15 @@ export default function Home() {
           if (prev.minutes > 0) {
             return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
           }
-          // Timer ends for the half or timeout
-          if (prev.isTimeout) {
-            return { ...prev, isRunning: true, isTimeout: false }; // Resume game timer
-          }
-          return { ...prev, isRunning: false }; // Stop half timer
+          // Timer ends for the half
+          return { ...prev, isRunning: false };
         });
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [timer.isRunning]);
+  }, [timer.isRunning, timer.isTimeout]);
   
   const handleToggleTimer = useCallback(() => {
     const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
@@ -688,3 +685,5 @@ export default function Home() {
     </>
   );
 }
+
+    
