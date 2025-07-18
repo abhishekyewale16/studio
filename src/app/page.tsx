@@ -139,30 +139,35 @@ export default function Home() {
   }, [matchDuration]);
   
   const handleTakeTimeout = useCallback((teamId: number) => {
-    const teamIndex = teams.findIndex(t => t.id === teamId);
-    if (teamIndex === -1 || teams[teamIndex].timeoutsRemaining <= 0 || !timer.isRunning || timer.isTimeout) return;
+    setTeams(currentTeams => {
+        const teamIndex = currentTeams.findIndex(t => t.id === teamId);
+        if (teamIndex === -1 || currentTeams[teamIndex].timeoutsRemaining <= 0 || !timer.isRunning || timer.isTimeout) {
+            return currentTeams;
+        }
 
-    setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
+        setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
 
-    const newTeams = [...teams] as [Team, Team];
-    newTeams[teamIndex].timeoutsRemaining -= 1;
-    setTeams(newTeams);
-    setSubstitutionsMadeThisBreak(0);
-
-    toast({
-        title: "Timeout Called",
-        description: `${teams[teamIndex].name} has called a timeout.`,
-    });
-
-    setTimeout(() => {
-        setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
+        const newTeams = [...currentTeams] as [Team, Team];
+        newTeams[teamIndex].timeoutsRemaining -= 1;
         setSubstitutionsMadeThisBreak(0);
+
         toast({
-            title: "Timeout Over",
-            description: "The match has resumed.",
+            title: "Timeout Called",
+            description: `${newTeams[teamIndex].name} has called a timeout.`,
         });
-    }, TIMEOUT_DURATION_SECONDS * 1000);
-  }, [teams, timer.isRunning, timer.isTimeout, toast]);
+
+        setTimeout(() => {
+            setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
+            setSubstitutionsMadeThisBreak(0);
+            toast({
+                title: "Timeout Over",
+                description: "The match has resumed.",
+            });
+        }, TIMEOUT_DURATION_SECONDS * 1000);
+
+        return newTeams;
+    });
+  }, [timer.isRunning, timer.isTimeout, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
     const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
@@ -408,32 +413,32 @@ export default function Home() {
   }, [raidState, teams, toast, switchRaidingTeam, addCommentary]);
 
 
-  const handleTeamNameChange = (teamId: number, newName: string) => {
+  const handleTeamNameChange = useCallback((teamId: number, newName: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, name: newName } : team
       ) as [Team, Team]
     );
-  };
+  }, []);
   
-  const handleTeamCoachChange = (teamId: number, newCoach: string) => {
+  const handleTeamCoachChange = useCallback((teamId: number, newCoach: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, coach: newCoach } : team
       ) as [Team, Team]
     );
-  };
+  }, []);
 
-  const handleTeamCityChange = (teamId: number, newCity: string) => {
+  const handleTeamCityChange = useCallback((teamId: number, newCity: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team =>
         team.id === teamId ? { ...team, city: newCity } : team
       ) as [Team, Team]
     );
-  };
+  }, []);
 
 
-  const handlePlayerNameChange = (teamId: number, playerId: number, newName: string) => {
+  const handlePlayerNameChange = useCallback((teamId: number, playerId: number, newName: string) => {
     setTeams(currentTeams =>
       currentTeams.map(team => {
         if (team.id === teamId) {
@@ -447,7 +452,7 @@ export default function Home() {
         return team;
       }) as [Team, Team]
     );
-  };
+  }, []);
 
    const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
     if (!isSubstitutionAllowed) {
@@ -485,7 +490,7 @@ export default function Home() {
     });
   }, [toast, isSubstitutionAllowed]);
 
-  const handleExportStats = () => {
+  const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
     const [team1, team2] = teams;
 
@@ -582,12 +587,12 @@ export default function Home() {
     
     const matchFileName = `${teams[0].name} vs ${teams[1].name} - Match Stats.xlsx`;
     XLSX.writeFile(wb, matchFileName);
-  };
+  }, [teams]);
 
-  const handleExportCommentary = () => {
+  const handleExportCommentary = useCallback(() => {
     const doc = new Document({
         sections: [{
-            children: commentaryLog.reverse().map(entry => 
+            children: commentaryLog.slice().reverse().map(entry => 
                 new Paragraph({
                     children: [new TextRun(entry)],
                     spacing: { after: 200 }
@@ -607,7 +612,7 @@ export default function Home() {
         window.URL.revokeObjectURL(url);
         a.remove();
     });
-};
+}, [commentaryLog, teams]);
 
   return (
     <>

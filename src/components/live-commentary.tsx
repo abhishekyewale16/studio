@@ -44,7 +44,6 @@ export function LiveCommentary({ commentaryLog, isLoading, onExportCommentary }:
                         type: "spring",
                         stiffness: 300,
                         damping: 25,
-                        delay: 0.1 * index
                     }}
                     className="text-sm"
                 >
