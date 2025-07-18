@@ -47,6 +47,7 @@ export default function Home() {
   });
 
   const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
+  const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
 
   const switchRaidingTeam = useCallback(() => {
     setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
@@ -651,6 +652,7 @@ export default function Home() {
                 onTeamCityChange={handleTeamCityChange}
                 onMatchDurationChange={handleMatchDurationChange}
                 onTakeTimeout={handleTakeTimeout}
+                isMatchPristine={isMatchPristine}
               />
                <ScoringControls 
                   teams={teams} 

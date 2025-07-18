@@ -144,6 +144,7 @@ interface ScoreboardProps {
   raidState: RaidState;
   raidingTeamId: number;
   matchDuration: number;
+  isMatchPristine: boolean;
   onToggleTimer: () => void;
   onResetTimer: () => void;
   onTeamNameChange: (teamId: number, newName: string) => void;
@@ -153,12 +154,11 @@ interface ScoreboardProps {
   onTakeTimeout: (teamId: number) => void;
 }
 
-export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout }: ScoreboardProps) {
+export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDuration, onToggleTimer, onResetTimer, onTeamNameChange, onTeamCoachChange, onTeamCityChange, onMatchDurationChange, onTakeTimeout, isMatchPristine }: ScoreboardProps) {
   const formatTime = (time: number) => time.toString().padStart(2, '0');
   const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
   const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
   const isMatchOver = isSecondHalfOver;
-  const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
 
   let buttonText = timer.isRunning ? 'Pause' : 'Start';
   if (timer.isTimeout) {
