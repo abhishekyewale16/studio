@@ -141,7 +141,7 @@ export function PlayerStatsTable({ team, onPlayerNameChange, onSubstitutePlayer,
           <User className="text-primary"/>
           {team.name} - Player Statistics
         </CardTitle>
-        <CardDescription>{isSubstitutionAllowed ? 'Substitution is allowed.' : 'Detailed stats are available in the post-match Excel export.'}</CardDescription>
+        <CardDescription>{isSubstitutionAllowed ? 'Substitution is allowed for this team.' : 'Substitutions are only allowed during timeouts or halftime.'}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">

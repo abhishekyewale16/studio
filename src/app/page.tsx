@@ -24,6 +24,11 @@ export type RaidState = {
   team2: number;
 }
 
+export type SubstitutionState = {
+  team1: number;
+  team2: number;
+}
+
 export default function Home() {
   const { toast } = useToast();
   const [teams, setTeams] = useState<[Team, Team]>(initialTeams);
@@ -32,7 +37,7 @@ export default function Home() {
   const [commentaryLog, setCommentaryLog] = useState<string[]>([]);
   const [isCommentaryLoading, setIsCommentaryLoading] = useState(false);
   const [matchDuration, setMatchDuration] = useState(INITIAL_MATCH_DURATION);
-  const [substitutionsMadeThisBreak, setSubstitutionsMadeThisBreak] = useState(0);
+  const [substitutionsMadeThisBreak, setSubstitutionsMadeThisBreak] = useState<SubstitutionState>({ team1: 0, team2: 0 });
   const [timer, setTimer] = useState({
     minutes: INITIAL_MATCH_DURATION,
     seconds: 0,
@@ -41,7 +46,7 @@ export default function Home() {
     isTimeout: false,
   });
 
-  const isSubstitutionAllowed = (timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0)) && substitutionsMadeThisBreak < 2;
+  const isSubstitutionPeriod = timer.isTimeout || (timer.half === 1 && timer.minutes === 0 && timer.seconds === 0);
 
   const switchRaidingTeam = useCallback(() => {
     setRaidingTeamId(prev => (prev === 1 ? 2 : 1));
@@ -85,6 +90,9 @@ export default function Home() {
             return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
           }
           // Timer ends for the half
+          if (prev.half === 1) {
+             setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
+          }
           return { ...prev, isRunning: false };
         });
       }, 1000);
@@ -103,7 +111,7 @@ export default function Home() {
     if (timer.isTimeout) {
       // Resume from timeout
       setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
-      setSubstitutionsMadeThisBreak(0);
+      setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
       toast({
           title: "Timeout Over",
           description: "The match has resumed.",
@@ -122,7 +130,7 @@ export default function Home() {
       });
       // Reset timeouts for the second half and substitutions
       setTeams(prevTeams => prevTeams.map(t => ({...t, timeoutsRemaining: 2})) as [Team, Team]);
-      setSubstitutionsMadeThisBreak(0);
+      setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
 
     } else {
       // Toggle pause/play
@@ -141,7 +149,7 @@ export default function Home() {
     setRaidState({ team1: 0, team2: 0 });
     setRaidingTeamId(1);
     setCommentaryLog([]);
-    setSubstitutionsMadeThisBreak(0);
+    setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
     // A deep copy is needed to reset players and timeouts
     const newInitialTeams = JSON.parse(JSON.stringify(initialTeams));
     newInitialTeams.forEach((team: Team) => team.timeoutsRemaining = 2);
@@ -156,7 +164,7 @@ export default function Home() {
     }
 
     setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
-    setSubstitutionsMadeThisBreak(0);
+    setSubstitutionsMadeThisBreak({ team1: 0, team2: 0 });
 
     const newTeams = [...teams] as [Team, Team];
     const teamIndex = newTeams.findIndex(t => t.id === teamId);
@@ -457,39 +465,43 @@ export default function Home() {
   }, []);
 
    const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
-    if (!isSubstitutionAllowed) {
+    const teamKey = teamId === 1 ? 'team1' : 'team2';
+    if (!isSubstitutionPeriod || substitutionsMadeThisBreak[teamKey] >= 2) {
       toast({
         title: "Substitution Not Allowed",
-        description: "Substitutions can only be made during a timeout or halftime, with a limit of 2 per break.",
+        description: "Substitutions can only be made during a timeout or halftime, with a limit of 2 per break for each team.",
         variant: "destructive",
       });
       return;
     }
     
-    const team = teams.find(t => t.id === teamId);
-    if (!team) return;
-
-    const playerIn = team.players.find(p => p.id === playerInId);
-    const playerOut = team.players.find(p => p.id === playerOutId);
-
-    if (!playerIn || !playerOut) return;
+    let playerInName = '';
+    let playerOutName = '';
     
     const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     const teamIndex = newTeams.findIndex(t => t.id === teamId)!;
     const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
     const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
 
-    newTeams[teamIndex].players[playerInIndex].isPlaying = true;
-    newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
-    
-    setTeams(newTeams);
-    setSubstitutionsMadeThisBreak(prev => prev + 1);
+    if (playerInIndex !== -1 && playerOutIndex !== -1) {
+        playerInName = newTeams[teamIndex].players[playerInIndex].name;
+        playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
 
-    toast({
-        title: "Substitution Successful",
-        description: `${playerIn.name} has been substituted in for ${playerOut.name}.`,
-    });
-  }, [teams, isSubstitutionAllowed, toast]);
+        newTeams[teamIndex].players[playerInIndex].isPlaying = true;
+        newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+        
+        setTeams(newTeams);
+        setSubstitutionsMadeThisBreak(prev => ({
+            ...prev,
+            [teamKey]: prev[teamKey] + 1,
+        }));
+
+        toast({
+            title: "Substitution Successful",
+            description: `${playerInName} has been substituted in for ${playerOutName}.`,
+        });
+    }
+  }, [teams, isSubstitutionPeriod, substitutionsMadeThisBreak, toast]);
 
   const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -654,8 +666,8 @@ export default function Home() {
 
 
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionAllowed} />
-              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionAllowed} />
+              <PlayerStatsTable team={teams[0]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod && substitutionsMadeThisBreak.team1 < 2} />
+              <PlayerStatsTable team={teams[1]} onPlayerNameChange={handlePlayerNameChange} onSubstitutePlayer={handleSubstitutePlayer} isSubstitutionAllowed={isSubstitutionPeriod && substitutionsMadeThisBreak.team2 < 2} />
           </div>
           <div className="mt-8 flex justify-center">
               <Button onClick={handleExportStats} size="lg">
