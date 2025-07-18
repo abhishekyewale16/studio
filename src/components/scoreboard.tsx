@@ -160,7 +160,9 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
   const isMatchOver = isSecondHalfOver;
 
   let buttonText = timer.isRunning ? 'Pause' : 'Start';
-  if (isFirstHalfOver) {
+  if (timer.isTimeout) {
+      buttonText = 'Resume';
+  } else if (isFirstHalfOver) {
     buttonText = 'Start Half 2';
   } else if (isMatchOver) {
     buttonText = 'Match Over';
@@ -237,7 +239,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
                 />
             </div>
             <div className="flex justify-center gap-2">
-                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver || timer.isTimeout}>
+                <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver && !timer.isTimeout}>
                     {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
                     {buttonText}
                 </Button>

@@ -18,7 +18,6 @@ import { Download } from 'lucide-react';
 
 
 const INITIAL_MATCH_DURATION = 20;
-const TIMEOUT_DURATION_SECONDS = 30; // 30 seconds for a timeout
 
 export type RaidState = {
   team1: number;
@@ -101,6 +100,17 @@ export default function Home() {
 
     if (isSecondHalfOver) return; // Match is fully over
 
+    if (timer.isTimeout) {
+      // Resume from timeout
+      setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
+      setSubstitutionsMadeThisBreak(0);
+      toast({
+          title: "Timeout Over",
+          description: "The match has resumed.",
+      });
+      return;
+    }
+
     if (isFirstHalfOver) {
       // Start the second half
       setTimer({
@@ -118,7 +128,7 @@ export default function Home() {
       // Toggle pause/play
       setTimer(prev => ({ ...prev, isRunning: !prev.isRunning }));
     }
-  }, [timer, matchDuration]);
+  }, [timer, matchDuration, toast]);
 
   const handleResetTimer = useCallback(() => {
     setTimer({
@@ -155,15 +165,6 @@ export default function Home() {
             title: "Timeout Called",
             description: `${newTeams[teamIndex].name} has called a timeout.`,
         });
-
-        setTimeout(() => {
-            setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
-            setSubstitutionsMadeThisBreak(0);
-            toast({
-                title: "Timeout Over",
-                description: "The match has resumed.",
-            });
-        }, TIMEOUT_DURATION_SECONDS * 1000);
 
         return newTeams;
     });
