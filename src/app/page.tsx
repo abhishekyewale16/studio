@@ -466,32 +466,30 @@ export default function Home() {
       return;
     }
     
-    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    const teamIndex = newTeams.findIndex(t => t.id === teamId);
-    if (teamIndex === -1) {
-        setTeams(newTeams);
-        return;
-    }
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
 
-    const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId);
-    const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId);
+    const playerIn = team.players.find(p => p.id === playerInId);
+    const playerOut = team.players.find(p => p.id === playerOutId);
 
-    if (playerInIndex !== -1 && playerOutIndex !== -1) {
-        newTeams[teamIndex].players[playerInIndex].isPlaying = true;
-        newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
-    }
+    if (!playerIn || !playerOut) return;
     
-    const playerInName = newTeams[teamIndex].players[playerInIndex].name;
-    const playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
+    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    const teamIndex = newTeams.findIndex(t => t.id === teamId)!;
+    const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
+    const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
 
+    newTeams[teamIndex].players[playerInIndex].isPlaying = true;
+    newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+    
     setTeams(newTeams);
     setSubstitutionsMadeThisBreak(prev => prev + 1);
 
     toast({
         title: "Substitution Successful",
-        description: `${playerInName} has been substituted in for ${playerOutName}.`,
+        description: `${playerIn.name} has been substituted in for ${playerOut.name}.`,
     });
-  }, [toast, isSubstitutionAllowed, teams]);
+  }, [teams, isSubstitutionAllowed, toast]);
 
   const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -671,5 +669,7 @@ export default function Home() {
     </>
   );
 }
+
+    
 
     
