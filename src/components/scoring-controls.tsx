@@ -61,11 +61,11 @@ const formSchema = z.object({
   path: ["playerId"],
 }).refine(data => {
     if (['raid', 'raid-bonus'].includes(data.pointType)) {
-        return data.points >= 1 && data.points <= 5;
+        return data.points >= 1 && data.points <= 6;
     }
     return true;
 }, {
-    message: "Raid points must be between 1 and 5.",
+    message: "Raid points must be between 1 and 6.",
     path: ["points"],
 }).refine(data => {
     if (['lona-bonus-points'].includes(data.pointType)) {
