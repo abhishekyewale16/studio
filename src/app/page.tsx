@@ -138,18 +138,16 @@ export default function Home() {
     setTeams(newInitialTeams);
   }, [matchDuration]);
   
-  const handleTakeTimeout = (teamId: number) => {
+  const handleTakeTimeout = useCallback((teamId: number) => {
     const teamIndex = teams.findIndex(t => t.id === teamId);
     if (teamIndex === -1 || teams[teamIndex].timeoutsRemaining <= 0 || !timer.isRunning || timer.isTimeout) return;
 
-    // Pause the main timer and start the timeout
     setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
 
-    // Deduct timeout
     const newTeams = [...teams] as [Team, Team];
     newTeams[teamIndex].timeoutsRemaining -= 1;
     setTeams(newTeams);
-    setSubstitutionsMadeThisBreak(0); // Reset for this new break
+    setSubstitutionsMadeThisBreak(0);
 
     toast({
         title: "Timeout Called",
@@ -157,20 +155,18 @@ export default function Home() {
     });
 
     setTimeout(() => {
-        // Resume game after timeout
         setTimer(prev => ({ ...prev, isRunning: true, isTimeout: false }));
-        setSubstitutionsMadeThisBreak(0); // Reset subs after timeout
+        setSubstitutionsMadeThisBreak(0);
         toast({
             title: "Timeout Over",
             description: "The match has resumed.",
         });
     }, TIMEOUT_DURATION_SECONDS * 1000);
-  };
+  }, [teams, timer.isRunning, timer.isTimeout, toast]);
 
   const handleMatchDurationChange = useCallback((newDuration: number) => {
     const duration = isNaN(newDuration) || newDuration < 1 ? 1 : newDuration;
     setMatchDuration(duration);
-    // Only update timer if it's not currently running
     if (!timer.isRunning) {
         setTimer(prev => ({ ...prev, minutes: duration, seconds: 0 }));
     }
@@ -292,13 +288,11 @@ export default function Home() {
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.id === data.playerId)?.name ?? 'Unknown Player';
     } else if (isTackleEvent) {
         const originalRaidingTeam = teams.find(t => t.id === raidingTeamId);
-        // This is a simplification. In a real app, you'd know who was raiding.
         raiderForCommentary = originalRaidingTeam?.players.find(p => p.isPlaying)?.name ?? 'Unknown Raider';
         defenderForCommentary = player?.name;
     } else { // raid event
         raiderForCommentary = player?.name;
     }
-
 
     const commentaryData = {
         eventType: eventType,
@@ -320,12 +314,7 @@ export default function Home() {
     setTeams(newTeams);
     if (!isTackleEvent) {
         switchRaidingTeam();
-    } else {
-        // After a successful tackle, the other team raids.
-        // The raidingTeamId is NOT the scoring team's ID.
-        // So we don't need to switch it. The current raidingTeamId is correct for the next raid.
     }
-
 }, [teams, raidState, addCommentary, switchRaidingTeam, raidingTeamId]);
 
 
@@ -500,12 +489,10 @@ export default function Home() {
     const wb = XLSX.utils.book_new();
     const [team1, team2] = teams;
 
-    // --- Styling ---
     const headerStyle = { font: { bold: true, color: { rgb: "FFFFFFFF" } }, fill: { fgColor: { rgb: "FFD32F2F" } }, alignment: { horizontal: "center", vertical: "center" } };
     const centeredStyle = { alignment: { horizontal: "center", vertical: "center" } };
     const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
 
-    // --- Match Summary Sheet ---
     const summaryData = [
       [`${team1.name} vs ${team2.name} - Match Summary`],
       [],
@@ -518,10 +505,10 @@ export default function Home() {
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     wsSummary["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, // Title
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } }, // Final Score
-      { s: { r: 6, c: 0 }, e: { r: 6, c: 1 } }, // Result
-      { s: { r: 7, c: 0 }, e: { r: 7, c: 1 } }  // Winner
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }, 
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 1 } }, 
+      { s: { r: 6, c: 0 }, e: { r: 6, c: 1 } }, 
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 1 } } 
     ];
     wsSummary['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
     wsSummary['A3'].s = { font: { bold: true, sz: 14 } };
@@ -529,8 +516,6 @@ export default function Home() {
     wsSummary['!cols'] = [{ wch: 20 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsSummary, "Match Summary");
 
-
-    // --- Team Sheets ---
     teams.forEach(team => {
         const teamDataForSheet = team.players.map(p => ({
             "Player Name": p.name,
@@ -556,16 +541,12 @@ export default function Home() {
         const ws = XLSX.utils.aoa_to_sheet(teamHeader, { origin: "A1" });
         XLSX.utils.sheet_add_json(ws, teamDataForSheet, { origin: "A5" });
 
-        // Merges
         ws["!merges"] = [
             { s: { r: 0, c: 0 }, e: { r: 0, c: teamDataForSheet[0] ? Object.keys(teamDataForSheet[0]).length - 1 : 10 } },
         ];
         
-        // --- Apply Styles ---
-        // Title
         ws['A1'].s = { font: { bold: true, sz: 16 }, alignment: { horizontal: "center" } };
 
-        // Headers
         const headerRange = XLSX.utils.decode_range(ws['!ref'] || 'A5:K5');
         for (let C = headerRange.s.c; C <= headerRange.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: 4, c: C });
@@ -574,7 +555,6 @@ export default function Home() {
             }
         }
         
-        // Data and Borders
         const dataRange = XLSX.utils.decode_range(ws['!ref'] || `A5:K${5 + team.players.length}`);
         for (let R = dataRange.s.r + 5; R <= dataRange.e.r; ++R) {
             for (let C = dataRange.s.c; C <= dataRange.e.c; ++C) {
@@ -583,14 +563,12 @@ export default function Home() {
                 
                 ws[cellAddress].s = { ...ws[cellAddress].s, border };
                 
-                // Center numeric data
                 if (typeof ws[cellAddress].v === 'number' || (C > 0 && ws[cellAddress].v === 'Active') || (C > 0 && ws[cellAddress].v === 'Substitute')) {
                     ws[cellAddress].s = { ...ws[cellAddress].s, ...centeredStyle };
                 }
             }
         }
         
-        // Column Widths
         const colWidths = Object.keys(teamDataForSheet[0] || {}).map((key) => ({ 
             wch: Math.max(
                 key.length, 
@@ -685,7 +663,3 @@ export default function Home() {
     </>
   );
 }
-
-    
-
-    
