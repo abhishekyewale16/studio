@@ -158,14 +158,12 @@ export default function Home() {
     setTimer(prev => ({ ...prev, isRunning: false, isTimeout: true }));
     setSubstitutionsMadeThisBreak(0);
 
-    setTeams(currentTeams => {
-        const newTeams = [...currentTeams] as [Team, Team];
-        const teamIndex = newTeams.findIndex(t => t.id === teamId);
-        if (teamIndex !== -1) {
-            newTeams[teamIndex].timeoutsRemaining -= 1;
-        }
-        return newTeams;
-    });
+    const newTeams = [...teams] as [Team, Team];
+    const teamIndex = newTeams.findIndex(t => t.id === teamId);
+    if (teamIndex !== -1) {
+        newTeams[teamIndex].timeoutsRemaining -= 1;
+    }
+    setTeams(newTeams);
 
     toast({
         title: "Timeout Called",
@@ -331,7 +329,7 @@ export default function Home() {
     const isTeam1 = teamId === 1;
     const currentRaids = isTeam1 ? raidState.team1 : raidState.team2;
     
-    const newTeamsWithRaidStat = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    let newTeamsWithRaidStat = JSON.parse(JSON.stringify(teams)) as [Team, Team];
     
     const raidingTeamIndex = newTeamsWithRaidStat.findIndex(t => t.id === teamId);
     if(raidingTeamIndex !== -1) {
@@ -468,31 +466,32 @@ export default function Home() {
       return;
     }
     
-    setTeams(currentTeams => {
-        const newTeams = JSON.parse(JSON.stringify(currentTeams)) as [Team, Team];
-        const teamIndex = newTeams.findIndex(t => t.id === teamId);
-        if (teamIndex === -1) return currentTeams;
+    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+    const teamIndex = newTeams.findIndex(t => t.id === teamId);
+    if (teamIndex === -1) {
+        setTeams(newTeams);
+        return;
+    }
 
-        const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId);
-        const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId);
+    const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId);
+    const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId);
 
-        if (playerInIndex !== -1 && playerOutIndex !== -1) {
-            newTeams[teamIndex].players[playerInIndex].isPlaying = true;
-            newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
-        }
-        
-        const playerInName = newTeams[teamIndex].players[playerInIndex].name;
-        const playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
+    if (playerInIndex !== -1 && playerOutIndex !== -1) {
+        newTeams[teamIndex].players[playerInIndex].isPlaying = true;
+        newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+    }
+    
+    const playerInName = newTeams[teamIndex].players[playerInIndex].name;
+    const playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
 
-        toast({
-            title: "Substitution Successful",
-            description: `${playerInName} has been substituted in for ${playerOutName}.`,
-        });
+    setTeams(newTeams);
+    setSubstitutionsMadeThisBreak(prev => prev + 1);
 
-        setSubstitutionsMadeThisBreak(prev => prev + 1);
-        return newTeams;
+    toast({
+        title: "Substitution Successful",
+        description: `${playerInName} has been substituted in for ${playerOutName}.`,
     });
-  }, [toast, isSubstitutionAllowed]);
+  }, [toast, isSubstitutionAllowed, teams]);
 
   const handleExportStats = useCallback(() => {
     const wb = XLSX.utils.book_new();
