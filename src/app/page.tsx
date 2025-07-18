@@ -465,7 +465,7 @@ export default function Home() {
     );
   }, []);
 
-   const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
+  const handleSubstitutePlayer = useCallback((teamId: number, playerInId: number, playerOutId: number) => {
     const teamKey = teamId === 1 ? 'team1' : 'team2';
     if (!isSubstitutionPeriod || substitutionsMadeThisBreak[teamKey] >= 2) {
       toast({
@@ -475,32 +475,36 @@ export default function Home() {
       });
       return;
     }
-    
-    let playerInName = '';
-    let playerOutName = '';
-    
-    const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
-    const teamIndex = newTeams.findIndex(t => t.id === teamId)!;
-    const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
-    const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
-
-    if (playerInIndex !== -1 && playerOutIndex !== -1) {
-        playerInName = newTeams[teamIndex].players[playerInIndex].name;
-        playerOutName = newTeams[teamIndex].players[playerOutIndex].name;
-
-        newTeams[teamIndex].players[playerInIndex].isPlaying = true;
-        newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
-        
-        setTeams(newTeams);
-        setSubstitutionsMadeThisBreak(prev => ({
-            ...prev,
-            [teamKey]: prev[teamKey] + 1,
-        }));
-
-        toast({
-            title: "Substitution Successful",
-            description: `${playerInName} has been substituted in for ${playerOutName}.`,
-        });
+  
+    let playerInName: string | undefined = '';
+    let playerOutName: string | undefined = '';
+  
+    const currentTeam = teams.find(t => t.id === teamId);
+    if (currentTeam) {
+      playerInName = currentTeam.players.find(p => p.id === playerInId)?.name;
+      playerOutName = currentTeam.players.find(p => p.id === playerOutId)?.name;
+    }
+  
+    if (playerInName && playerOutName) {
+      const newTeams = JSON.parse(JSON.stringify(teams)) as [Team, Team];
+      const teamIndex = newTeams.findIndex(t => t.id === teamId)!;
+      const playerInIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerInId)!;
+      const playerOutIndex = newTeams[teamIndex].players.findIndex(p => p.id === playerOutId)!;
+  
+      newTeams[teamIndex].players[playerInIndex].isPlaying = true;
+      newTeams[teamIndex].players[playerOutIndex].isPlaying = false;
+  
+      setTeams(newTeams);
+  
+      setSubstitutionsMadeThisBreak(prev => ({
+        ...prev,
+        [teamKey]: prev[teamKey] + 1,
+      }));
+  
+      toast({
+        title: "Substitution Successful",
+        description: `${playerInName} has been substituted in for ${playerOutName}.`,
+      });
     }
   }, [teams, isSubstitutionPeriod, substitutionsMadeThisBreak, toast]);
 

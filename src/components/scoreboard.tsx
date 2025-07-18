@@ -237,7 +237,6 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
                         value={matchDuration}
                         onChange={(e) => onMatchDurationChange(parseInt(e.target.value, 10))}
                         className="w-20"
-                        disabled={timer.isRunning}
                     />
                 </div>
             )}
