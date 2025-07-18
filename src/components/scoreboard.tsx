@@ -158,6 +158,7 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
   const isFirstHalfOver = timer.half === 1 && timer.minutes === 0 && timer.seconds === 0;
   const isSecondHalfOver = timer.half === 2 && timer.minutes === 0 && timer.seconds === 0;
   const isMatchOver = isSecondHalfOver;
+  const isMatchPristine = timer.half === 1 && timer.minutes === matchDuration && timer.seconds === 0 && !timer.isRunning;
 
   let buttonText = timer.isRunning ? 'Pause' : 'Start';
   if (timer.isTimeout) {
@@ -224,20 +225,22 @@ export function Scoreboard({ teams, timer, raidState, raidingTeamId, matchDurati
           />
         </div>
         <div className="mt-6 flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2">
-                <Label htmlFor="match-duration" className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4"/>
-                    Half Duration (min):
-                </Label>
-                <Input 
-                    id="match-duration"
-                    type="number" 
-                    value={matchDuration}
-                    onChange={(e) => onMatchDurationChange(parseInt(e.target.value, 10))}
-                    className="w-20"
-                    disabled={timer.isRunning}
-                />
-            </div>
+            {isMatchPristine && (
+                <div className="flex items-center gap-2">
+                    <Label htmlFor="match-duration" className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4"/>
+                        Half Duration (min):
+                    </Label>
+                    <Input 
+                        id="match-duration"
+                        type="number" 
+                        value={matchDuration}
+                        onChange={(e) => onMatchDurationChange(parseInt(e.target.value, 10))}
+                        className="w-20"
+                        disabled={timer.isRunning}
+                    />
+                </div>
+            )}
             <div className="flex justify-center gap-2">
                 <Button onClick={onToggleTimer} size="sm" disabled={isMatchOver && !timer.isTimeout}>
                     {timer.isRunning ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
