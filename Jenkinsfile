@@ -1,23 +1,22 @@
 pipeline {
     agent any
     tools {
-        nodejs 'Node18'  // Configure NodeJS in Jenkins
+        nodejs 'Node18'
     }
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/abhishekyewale16/studio.git'
+                git branch: 'master', url: 'https://github.com/abhishekyewale16/studio.git'
             }
         }
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                bat 'npm install'
             }
         }
         stage('Run Tests') {
             steps {
-                sh 'npm test || echo "No tests found"'
+                bat 'npm test'
             }
         }
     }
